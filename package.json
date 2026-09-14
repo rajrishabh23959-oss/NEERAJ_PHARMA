@@ -1,0 +1,42 @@
+{
+  "name": "neeraj-pharma-hospital-locator",
+  "version": "2.0.0",
+  "description": "Neeraj Pharma Healthcare & Emergency Hospital Locator Platform - Node.js, Express.js, MongoDB/PostgreSQL, Geolocation & RBAC",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "node --test tests/api.test.js",
+    "seed": "node -e \"require('./src/config/db').seedDatabase()\""
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.5.2",
+    "pg": "^8.12.0"
+  },
+  "devDependencies": {
+    "supertest": "^7.0.0"
+  },
+  "keywords": [
+    "healthcare",
+    "hospital-locator",
+    "emergency-services",
+    "ambulance",
+    "geolocation",
+    "haversine",
+    "jwt",
+    "express",
+    "mongodb",
+    "postgresql",
+    "rbac"
+  ],
+  "author": "Neeraj Pharma Engineering Team",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

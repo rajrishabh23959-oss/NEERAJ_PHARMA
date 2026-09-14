@@ -1,0 +1,10 @@
+node_modules/
+.npm/
+.env
+.env.local
+.env.*.local
+data/hospital_locator_db.json
+data/*.tmp*
+*.log
+.DS_Store
+coverage/
