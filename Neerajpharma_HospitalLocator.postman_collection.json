@@ -1,0 +1,264 @@
+{
+  "info": {
+    "_postman_id": "neerajpharma-hospital-locator-api-2026",
+    "name": "Neerajpharma | Healthcare & Emergency Hospital Locator API",
+    "description": "Comprehensive Postman collection for the Neerajpharma Responsive Healthcare & Emergency HospitalLocator backend platform.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "hospitalId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Authentication & Users",
+      "item": [
+        {
+          "name": "Register User",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Aarav Sharma\",\n  \"email\": \"aarav@example.com\",\n  \"password\": \"SecurePass123!\",\n  \"phone\": \"+91 98765 43210\",\n  \"role\": \"user\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "register"]
+            }
+          }
+        },
+        {
+          "name": "Login Super Admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.token) {",
+                  "    pm.collectionVariables.set('token', jsonData.token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@neerajpharma.com\",\n  \"password\": \"AdminPassword123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Get Current User Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "me"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Hospitals & Geolocation",
+      "item": [
+        {
+          "name": "Find Nearby Hospitals (GPS Lat/Lng)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/hospitals/nearby?lat=28.5672&lng=77.2090&radius=20&hasIcu=true",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "hospitals", "nearby"],
+              "query": [
+                { "key": "lat", "value": "28.5672", "description": "AIIMS New Delhi Latitude" },
+                { "key": "lng", "value": "77.2090", "description": "AIIMS New Delhi Longitude" },
+                { "key": "radius", "value": "20", "description": "Radius in Kilometers" },
+                { "key": "hasIcu", "value": "true" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Search & Multi-Filter Hospitals",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/hospitals/search?q=cardio&city=Delhi&is24x7=true",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "hospitals", "search"],
+              "query": [
+                { "key": "q", "value": "cardio" },
+                { "key": "city", "value": "Delhi" },
+                { "key": "is24x7", "value": "true" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get All Hospitals (Paginated)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/hospitals?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "hospitals"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Hospital Real-time Bed Availability",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"availableBeds\": 85,\n  \"availableIcuBeds\": 14,\n  \"availableOxygenBeds\": 30,\n  \"isEmergencyAccepting\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/hospitals/{{hospitalId}}/availability",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "hospitals", "{{hospitalId}}", "availability"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Emergency & Quick SOS",
+      "item": [
+        {
+          "name": "1-Tap Quick SOS Emergency Aggregator",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/emergency/quick-sos?lat=28.5672&lng=77.2090",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "emergency", "quick-sos"],
+              "query": [
+                { "key": "lat", "value": "28.5672" },
+                { "key": "lng", "value": "77.2090" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Emergency Helplines",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/emergency/contacts",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "emergency", "contacts"]
+            }
+          }
+        },
+        {
+          "name": "Find Ambulances (Nearby GPS)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/emergency/ambulances?lat=28.5672&lng=77.2090&radius=25",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "emergency", "ambulances"],
+              "query": [
+                { "key": "lat", "value": "28.5672" },
+                { "key": "lng", "value": "77.2090" },
+                { "key": "radius", "value": "25" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Doctors Directory",
+      "item": [
+        {
+          "name": "Get All Doctors with Filter",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/doctors?specialization=Cardiology&isEmergencyAvailable=true",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "doctors"],
+              "query": [
+                { "key": "specialization", "value": "Cardiology" },
+                { "key": "isEmergencyAvailable", "value": "true" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Admin Management",
+      "item": [
+        {
+          "name": "Get System Dashboard Stats",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/dashboard-stats",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "dashboard-stats"]
+            }
+          }
+        },
+        {
+          "name": "List All Users (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/users?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "users"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

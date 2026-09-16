@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Neerajpharma | Healthcare & Emergency Hospital Locator</title>
+  <meta name="description" content="Find nearby hospitals, view real-time ICU/oxygen bed availability, dispatch ambulances, and trigger instant emergency SOS with Neerajpharma." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- Urgent Emergency Alert Banner -->
+  <div class="emergency-banner" id="emergencyBanner">
+    <div class="banner-inner">
+      <div class="banner-tag">🚨 24/7 CRITICAL RESPONSE</div>
+      <div class="banner-text">National Medical Helpline: <strong>108 / 112</strong> | Unified Emergency Response Active</div>
+      <button class="banner-sos-btn" onclick="openSosModal()">⚡ 1-Tap Quick SOS</button>
+    </div>
+  </div>
+
+  <!-- Header Navigation -->
+  <header class="site-header">
+    <div class="container header-container">
+      <div class="logo-group">
+        <div class="logo-symbol">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+        </div>
+        <div class="logo-text">
+          <span class="logo-title">NEERAJ<strong>PHARMA</strong></span>
+          <span class="logo-sub">Healthcare & Emergency Locator</span>
+        </div>
+      </div>
+
+      <nav class="nav-links">
+        <a href="#locator" class="nav-link active">Hospital Locator</a>
+        <a href="#emergency" class="nav-link">Emergency Helplines</a>
+        <a href="#ambulances" class="nav-link">Ambulance Fleet</a>
+        <a href="/api-docs" target="_blank" class="nav-link badge-link">Swagger Docs ↗</a>
+      </nav>
+
+      <div class="header-actions">
+        <button class="btn btn-outline-sm" id="authBtn" onclick="openAuthModal()">🔑 Admin / Login</button>
+        <button class="btn btn-sos-sm" onclick="triggerGpsSos()">⚡ Quick SOS</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero Section with Geolocation & Search -->
+  <section class="hero-section">
+    <div class="container hero-container">
+      <div class="hero-content">
+        <span class="hero-badge">📍 Geolocation-Powered Emergency Network</span>
+        <h1 class="hero-title">Find Nearby Hospitals with <span class="highlight">Live Bed & ICU</span> Availability</h1>
+        <p class="hero-subtitle">
+          Real-time access to verified hospital facilities, trauma centers, oxygen supply, and ambulance response across India.
+        </p>
+
+        <!-- Interactive Search & Geo Bar -->
+        <div class="search-card">
+          <div class="search-row">
+            <div class="search-field flex-2">
+              <label for="searchInput">Search Hospital, City, or Specialty</label>
+              <div class="input-with-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                <input type="text" id="searchInput" placeholder="e.g. AIIMS, Cardiology, Trauma, ICU..." />
+              </div>
+            </div>
+
+            <div class="search-field">
+              <label for="citySelect">Select City</label>
+              <select id="citySelect">
+                <option value="">All Regions</option>
+                <option value="New Delhi">New Delhi</option>
+                <option value="Gurugram">Gurugram</option>
+                <option value="Noida">Noida</option>
+                <option value="Mumbai">Mumbai</option>
+                <option value="Bangalore">Bangalore</option>
+              </select>
+            </div>
+
+            <div class="search-field">
+              <label for="radiusSelect">Search Radius</label>
+              <select id="radiusSelect">
+                <option value="10">Within 10 km</option>
+                <option value="20" selected>Within 20 km</option>
+                <option value="35">Within 35 km</option>
+                <option value="50">Within 50 km</option>
+              </select>
+            </div>
+
+            <div class="search-actions">
+              <button class="btn btn-primary" onclick="searchHospitals()">
+                <span>Search</span>
+              </button>
+              <button class="btn btn-geo" onclick="locateNearbyGps()" title="Use Current GPS Coordinates">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon></svg>
+                <span>Near Me</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Filter Pills -->
+          <div class="filter-pills">
+            <span class="filter-label">Quick Filters:</span>
+            <button class="pill" data-filter="hasIcu" onclick="togglePill(this)">🟢 Available ICU</button>
+            <button class="pill" data-filter="hasOxygen" onclick="togglePill(this)">💨 Oxygen Beds</button>
+            <button class="pill" data-filter="is24x7" onclick="togglePill(this)">⏰ 24x7 Open</button>
+            <button class="pill" data-filter="trauma" onclick="togglePill(this)">🏥 Trauma Center</button>
+            <button class="pill" data-filter="cardiology" onclick="togglePill(this)">❤️ Cardiology</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Metrics Grid -->
+      <div class="metrics-grid">
+        <div class="metric-card">
+          <div class="metric-icon blue">🏥</div>
+          <div class="metric-info">
+            <span class="metric-num" id="statHospitals">--</span>
+            <span class="metric-label">Verified Hospitals</span>
+          </div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-icon red">🛏️</div>
+          <div class="metric-info">
+            <span class="metric-num" id="statIcu">--</span>
+            <span class="metric-label">Live ICU Beds</span>
+          </div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-icon green">🚑</div>
+          <div class="metric-info">
+            <span class="metric-num" id="statAmbulances">--</span>
+            <span class="metric-label">Available Ambulances</span>
+          </div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-icon amber">📞</div>
+          <div class="metric-info">
+            <span class="metric-num" id="statHelplines">--</span>
+            <span class="metric-label">Emergency Helplines</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Hospital Results Section -->
+  <section class="results-section" id="locator">
+    <div class="container">
+      <div class="section-header">
+        <div>
+          <h2 class="section-title">Hospitals & Emergency Facilities</h2>
+          <p class="section-desc" id="resultsSubtext">Showing verified healthcare centers with real-time capacity</p>
+        </div>
+        <div class="results-meta">
+          <span class="status-indicator live"></span>
+          <span class="meta-label" id="resultsCount">Loading hospitals...</span>
+        </div>
+      </div>
+
+      <div class="hospitals-grid" id="hospitalsGrid">
+        <!-- Hospital Cards rendered dynamically -->
+      </div>
+    </div>
+  </section>
+
+  <!-- Ambulance Fleet Section -->
+  <section class="ambulances-section" id="ambulances">
+    <div class="container">
+      <div class="section-header">
+        <div>
+          <h2 class="section-title">Emergency Ambulance Fleet</h2>
+          <p class="section-desc">On-demand GPS dispatched Advanced & Basic Life Support units</p>
+        </div>
+      </div>
+
+      <div class="ambulances-grid" id="ambulancesGrid">
+        <!-- Ambulance Cards rendered dynamically -->
+      </div>
+    </div>
+  </section>
+
+  <!-- National & City Helplines Section -->
+  <section class="helpline-section" id="emergency">
+    <div class="container">
+      <div class="section-header">
+        <div>
+          <h2 class="section-title">24x7 Emergency Helplines & Response</h2>
+          <p class="section-desc">Verified toll-free emergency dispatch and crisis response hotlines</p>
+        </div>
+      </div>
+
+      <div class="helplines-grid" id="helplinesGrid">
+        <!-- Emergency Contacts rendered dynamically -->
+      </div>
+    </div>
+  </section>
+
+  <!-- Quick SOS Modal -->
+  <div class="modal-overlay" id="sosModal">
+    <div class="modal-card sos-modal-card">
+      <button class="modal-close" onclick="closeSosModal()">×</button>
+      <div class="sos-modal-header">
+        <div class="sos-pulse-ring">⚡</div>
+        <div>
+          <h3 class="sos-title">Emergency 1-Tap SOS Activated</h3>
+          <p class="sos-sub">Immediate dispatch response & nearest critical care triage</p>
+        </div>
+      </div>
+      <div class="sos-content" id="sosContent">
+        <div class="loading-spinner">Locating nearest emergency hospitals & available ambulances...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Admin / User Auth Modal -->
+  <div class="modal-overlay" id="authModal">
+    <div class="modal-card">
+      <button class="modal-close" onclick="closeAuthModal()">×</button>
+      <div class="modal-header">
+        <h3 id="authModalTitle">Neerajpharma Portal Access</h3>
+        <p class="modal-sub">Login to manage bed availability, hospital data, or view your saved bookmarks</p>
+      </div>
+
+      <div class="auth-tabs">
+        <button class="auth-tab active" id="loginTabBtn" onclick="switchAuthTab('login')">Login</button>
+        <button class="auth-tab" id="registerTabBtn" onclick="switchAuthTab('register')">Register</button>
+      </div>
+
+      <div class="auth-body" id="authBody">
+        <form id="loginForm" onsubmit="handleLogin(event)">
+          <div class="form-group">
+            <label>Email Address</label>
+            <input type="email" id="loginEmail" value="admin@neerajpharma.com" required />
+          </div>
+          <div class="form-group">
+            <label>Password</label>
+            <input type="password" id="loginPassword" value="AdminPassword123!" required />
+          </div>
+          <button type="submit" class="btn btn-primary full-width">Sign In</button>
+          <div class="demo-credentials">
+            <strong>Default Demo Accounts:</strong><br/>
+            • Super Admin: <code>admin@neerajpharma.com</code> / <code>AdminPassword123!</code><br/>
+            • Hospital Admin: <code>rajesh.verma@aiims.edu</code> / <code>HospitalAdmin123!</code><br/>
+            • User: <code>priya.patel@gmail.com</code> / <code>UserPassword123!</code>
+          </div>
+        </form>
+
+        <form id="registerForm" onsubmit="handleRegister(event)" style="display: none;">
+          <div class="form-group">
+            <label>Full Name</label>
+            <input type="text" id="regName" placeholder="Dr. John Doe" required />
+          </div>
+          <div class="form-group">
+            <label>Email Address</label>
+            <input type="email" id="regEmail" placeholder="john@example.com" required />
+          </div>
+          <div class="form-group">
+            <label>Password (min 6 characters)</label>
+            <input type="password" id="regPassword" minlength="6" required />
+          </div>
+          <div class="form-group">
+            <label>Phone Number</label>
+            <input type="tel" id="regPhone" placeholder="+91 98765 43210" />
+          </div>
+          <div class="form-group">
+            <label>Account Role</label>
+            <select id="regRole">
+              <option value="user">User / Patient</option>
+              <option value="hospital_admin">Hospital Administrator</option>
+            </select>
+          </div>
+          <button type="submit" class="btn btn-primary full-width">Create Account</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bed Availability Fast Update Modal (For Admins) -->
+  <div class="modal-overlay" id="bedUpdateModal">
+    <div class="modal-card">
+      <button class="modal-close" onclick="closeBedModal()">×</button>
+      <div class="modal-header">
+        <h3>⚡ Real-Time Bed Availability Update</h3>
+        <p class="modal-sub" id="bedModalHospitalName">Update emergency capacity in real time</p>
+      </div>
+      <form id="bedUpdateForm" onsubmit="handleBedUpdate(event)">
+        <input type="hidden" id="bedHospitalId" />
+        <div class="form-row-2">
+          <div class="form-group">
+            <label>Available Beds</label>
+            <input type="number" id="bedAvailable" min="0" required />
+          </div>
+          <div class="form-group">
+            <label>Available ICU Beds</label>
+            <input type="number" id="bedIcuAvailable" min="0" required />
+          </div>
+        </div>
+        <div class="form-row-2">
+          <div class="form-group">
+            <label>Available Oxygen Beds</label>
+            <input type="number" id="bedOxygenAvailable" min="0" required />
+          </div>
+          <div class="form-group">
+            <label>Active Ambulances</label>
+            <input type="number" id="bedAmbulanceCount" min="0" required />
+          </div>
+        </div>
+        <div class="form-group checkbox-group">
+          <label class="toggle-label">
+            <input type="checkbox" id="bedEmergencyAccepting" />
+            <span>Currently Accepting Emergency Patients</span>
+          </label>
+        </div>
+        <button type="submit" class="btn btn-primary full-width">Update Real-Time Capacity</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <!-- Footer -->
+  <footer class="site-footer">
+    <div class="container footer-content">
+      <div class="footer-left">
+        <div class="logo-text">
+          <span class="logo-title white">NEERAJ<strong>PHARMA</strong></span>
+          <span class="logo-sub white-muted">Responsive Healthcare & Emergency HospitalLocator Website</span>
+        </div>
+        <p class="footer-desc">
+          Engineered for rapid emergency healthcare response, real-time bed tracking, and geospatial hospital discovery.
+        </p>
+      </div>
+      <div class="footer-links">
+        <div class="footer-col">
+          <h4>API Ecosystem</h4>
+          <a href="/api-docs" target="_blank">Swagger OpenAPI Docs</a>
+          <a href="/health" target="_blank">Service Health Status</a>
+          <a href="/api/v1/hospitals/nearby?lat=28.5672&lng=77.2090" target="_blank">Nearby Geo API</a>
+          <a href="/api/v1/emergency/quick-sos" target="_blank">1-Tap SOS API</a>
+        </div>
+        <div class="footer-col">
+          <h4>Emergency Hotlines</h4>
+          <a href="tel:112">National Unified (112)</a>
+          <a href="tel:108">Ambulance Dispatch (108)</a>
+          <a href="tel:102">Free Patient Transport (102)</a>
+          <a href="tel:104">Central Blood Bank (104)</a>
+        </div>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <div class="container">
+        <p>© 2026 Neerajpharma Healthcare Technologies. All rights reserved.</p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,41 @@
+{
+  "name": "neerajpharma-backend",
+  "version": "1.0.0",
+  "description": "Responsive Healthcare & Emergency HospitalLocator Backend API - Neerajpharma",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "seed": "node src/seed/seeder.js",
+    "seed:destroy": "node src/seed/seeder.js -d",
+    "test": "node test/api.test.js"
+  },
+  "keywords": [
+    "healthcare",
+    "hospital-locator",
+    "emergency-services",
+    "geospatial",
+    "express",
+    "mongodb",
+    "jwt",
+    "neerajpharma"
+  ],
+  "author": "Neerajpharma Engineering Team",
+  "license": "ISC",
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "express-validator": "^7.3.2",
+    "helmet": "^8.3.0",
+    "jsonwebtoken": "^9.0.3",
+    "mongoose": "^9.10.1",
+    "morgan": "^1.12.1",
+    "swagger-ui-express": "^5.0.1"
+  },
+  "devDependencies": {
+    "mongodb-memory-server": "^10.1.4",
+    "nodemon": "^3.1.9"
+  }
+}
