@@ -18,13 +18,17 @@ const validate = require('../middleware/validate');
 // Validation rules
 const registerValidation = [
   check('name', 'Name is required').notEmpty().trim(),
-  check('email', 'Please include a valid email address').isEmail().normalizeEmail(),
+  check('email', 'Please include a valid email address')
+    .isEmail()
+    .normalizeEmail({ gmail_remove_dots: false }),
   check('password', 'Password must be at least 6 characters long').isLength({ min: 6 }),
   validate,
 ];
 
 const loginValidation = [
-  check('email', 'Please include a valid email address').isEmail().normalizeEmail(),
+  check('email', 'Please include a valid email address')
+    .isEmail()
+    .normalizeEmail({ gmail_remove_dots: false }),
   check('password', 'Password is required').notEmpty(),
   validate,
 ];

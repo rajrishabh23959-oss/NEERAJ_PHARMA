@@ -61,7 +61,14 @@ cp .env.example .env
 
 ### Running Automated Tests
 ```bash
+# Run comprehensive Jest & Supertest test suite (31 tests)
 npm test
+
+# Run standalone integration test suite (22 tests)
+npm run test:integration
+
+# Run all test suites
+npm run test:all
 ```
 
 ### Starting the Server

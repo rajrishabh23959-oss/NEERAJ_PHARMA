@@ -171,4 +171,8 @@ const runTests = async () => {
   }
 };
 
-runTests();
+if (require.main === module) {
+  runTests();
+}
+
+module.exports = runTests;

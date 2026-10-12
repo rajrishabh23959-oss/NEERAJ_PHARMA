@@ -10,7 +10,7 @@ const { calculateHaversineDistance, isValidCoordinates } = require('../utils/geo
  */
 exports.getEmergencyContacts = async (req, res, next) => {
   try {
-    const { category, city, level } = req.query;
+    const { category, city, level, page, limit } = req.query;
 
     const query = { isActive: true };
 
@@ -28,6 +28,29 @@ exports.getEmergencyContacts = async (req, res, next) => {
         { city: 'All Cities' },
         { level: 'National' },
       ];
+    }
+
+    if (page || limit) {
+      const pageNum = parseInt(page, 10) || 1;
+      const limitNum = parseInt(limit, 10) || 10;
+      const skip = (pageNum - 1) * limitNum;
+
+      const [contacts, total] = await Promise.all([
+        EmergencyContact.find(query)
+          .sort({ priority: 1, category: 1 })
+          .skip(skip)
+          .limit(limitNum),
+        EmergencyContact.countDocuments(query),
+      ]);
+
+      return res.status(200).json({
+        success: true,
+        total,
+        page: pageNum,
+        totalPages: Math.ceil(total / limitNum),
+        count: contacts.length,
+        data: contacts,
+      });
     }
 
     const contacts = await EmergencyContact.find(query).sort({ priority: 1, category: 1 });
@@ -123,7 +146,7 @@ exports.deleteEmergencyContact = async (req, res, next) => {
  */
 exports.getAmbulances = async (req, res, next) => {
   try {
-    const { lat, lng, radius = 25, city, status, type } = req.query;
+    const { lat, lng, radius = 25, city, status, type, page, limit } = req.query;
 
     const query = {};
 
@@ -154,7 +177,9 @@ exports.getAmbulances = async (req, res, next) => {
         },
       };
 
-      const ambulances = await Ambulance.find(query).populate('baseHospital', 'name contactPhone emergencyHotline address');
+      const ambulances = await Ambulance.find(query)
+        .limit(parseInt(limit, 10) || 50)
+        .populate('baseHospital', 'name contactPhone emergencyHotline address');
 
       const results = ambulances.map((amb) => {
         const ambObj = amb.toObject();
@@ -173,6 +198,30 @@ exports.getAmbulances = async (req, res, next) => {
 
     if (city) {
       query.city = new RegExp(city, 'i');
+    }
+
+    if (page || limit) {
+      const pageNum = parseInt(page, 10) || 1;
+      const limitNum = parseInt(limit, 10) || 10;
+      const skip = (pageNum - 1) * limitNum;
+
+      const [ambulances, total] = await Promise.all([
+        Ambulance.find(query)
+          .populate('baseHospital', 'name contactPhone emergencyHotline address')
+          .skip(skip)
+          .limit(limitNum)
+          .sort('vehicleNumber'),
+        Ambulance.countDocuments(query),
+      ]);
+
+      return res.status(200).json({
+        success: true,
+        total,
+        page: pageNum,
+        totalPages: Math.ceil(total / limitNum),
+        count: ambulances.length,
+        data: ambulances,
+      });
     }
 
     const ambulances = await Ambulance.find(query).populate('baseHospital', 'name contactPhone emergencyHotline address');

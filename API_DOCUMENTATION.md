@@ -10,6 +10,12 @@ Production-grade RESTful API service developed for the **Responsive Healthcare &
 - **Service Health Check**: `http://localhost:5000/health`
 - **Authentication**: JWT (JSON Web Tokens) with `Authorization: Bearer <token>`
 - **Geospatial Engine**: MongoDB `2dsphere` index with Haversine great-circle distance computation in kilometers.
+- **Security Hardening**:
+  - `helmet`: Sets HTTP security headers (CSP, XSS, Frameguard, etc.).
+  - `express-rate-limit`: Prevents DDoS and brute-force credential stuffing (100 req/15min API general, 20 req/15min on auth endpoints).
+  - `bcryptjs`: Password hashing with 10 salt rounds; passwords excluded from queries by default (`select: false`).
+  - `cors`: Configurable cross-origin resource access via environment variables.
+  - `express-validator`: Rigorous input validation and sanitization on all mutating endpoints.
 
 ---
 
@@ -19,7 +25,7 @@ Production-grade RESTful API service developed for the **Responsive Healthcare &
 
 | Method | Endpoint | Access | Description |
 | :--- | :--- | :--- | :--- |
-| `POST` | `/api/v1/auth/register` | Public | Register new user or hospital admin |
+| `POST` | `/api/v1/auth/register` | Public | Register new user or hospital admin (super_admin requires `adminSecret`) |
 | `POST` | `/api/v1/auth/login` | Public | Authenticate user and receive JWT |
 | `GET` | `/api/v1/auth/me` | Private | Retrieve authenticated user profile |
 | `PUT` | `/api/v1/auth/updatedetails` | Private | Update name, phone, emergency contacts |
@@ -69,11 +75,11 @@ Production-grade RESTful API service developed for the **Responsive Healthcare &
 | Method | Endpoint | Access | Description |
 | :--- | :--- | :--- | :--- |
 | `GET` | `/api/v1/emergency/quick-sos` | Public | **1-Tap SOS Triage**: Nearest emergency hospital + ambulance + helplines |
-| `GET` | `/api/v1/emergency/contacts` | Public | List national and city emergency hotlines |
+| `GET` | `/api/v1/emergency/contacts` | Public | List national and city emergency hotlines (supports pagination) |
 | `POST` | `/api/v1/emergency/contacts` | Super Admin | Create verified emergency helpline |
 | `PUT` | `/api/v1/emergency/contacts/:id` | Super Admin | Update helpline info |
 | `DELETE`| `/api/v1/emergency/contacts/:id` | Super Admin | Delete helpline |
-| `GET` | `/api/v1/emergency/ambulances` | Public | Find ambulances (GPS nearby or by city) |
+| `GET` | `/api/v1/emergency/ambulances` | Public | Find ambulances (GPS nearby or by city with pagination) |
 | `POST` | `/api/v1/emergency/ambulances` | Admin / Hospital Admin | Register new ambulance vehicle |
 | `PATCH` | `/api/v1/emergency/ambulances/:id/status` | Admin / Hospital Admin | Update status (`available`, `on_call`, `dispatched`) |
 
@@ -83,7 +89,7 @@ Production-grade RESTful API service developed for the **Responsive Healthcare &
 
 | Method | Endpoint | Access | Description |
 | :--- | :--- | :--- | :--- |
-| `GET` | `/api/v1/doctors` | Public | Filter doctors by hospital, specialty, emergency duty |
+| `GET` | `/api/v1/doctors` | Public | Filter doctors by hospital, specialty, emergency duty, with pagination |
 | `GET` | `/api/v1/doctors/:id` | Public | Doctor profile with consultation details |
 | `POST` | `/api/v1/doctors` | Admin / Hospital Admin | Add doctor to hospital roster |
 | `PUT` | `/api/v1/doctors/:id` | Admin / Hospital Admin | Update doctor details |
@@ -121,7 +127,14 @@ Production-grade RESTful API service developed for the **Responsive Healthcare &
 
 2. **Run tests**:
    ```bash
+   # Run Jest automated test suite
    npm test
+
+   # Run integration tests
+   npm run test:integration
+
+   # Run all test suites
+   npm run test:all
    ```
 
 3. **Start development server**:
