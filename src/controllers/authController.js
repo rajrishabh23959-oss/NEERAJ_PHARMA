@@ -18,13 +18,22 @@ exports.register = async (req, res, next) => {
       });
     }
 
+    // Block self-registration as hospital_admin
+    if (role === 'hospital_admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Self-registration as hospital_admin is not allowed. Hospital administrators must be provisioned by a super administrator.',
+      });
+    }
+
     // Protect super_admin role escalation
     let assignedRole = 'user';
-    if (role === 'hospital_admin') {
-      assignedRole = 'hospital_admin';
-    } else if (role === 'super_admin') {
+    if (role === 'super_admin') {
+      if (!process.env.ADMIN_SECRET) {
+        throw new Error('ADMIN_SECRET environment variable is missing.');
+      }
       // Require admin key or verification for creating super admin
-      if (req.body.adminSecret !== (process.env.ADMIN_SECRET || 'neeraj_super_admin_secret_2026')) {
+      if (req.body.adminSecret !== process.env.ADMIN_SECRET) {
         return res.status(403).json({
           success: false,
           message: 'Invalid admin secret to register as super_admin.',
@@ -70,7 +79,7 @@ exports.login = async (req, res, next) => {
     if (!user) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid credentials. User not found.',
+        message: 'Invalid credentials',
       });
     }
 
@@ -79,7 +88,7 @@ exports.login = async (req, res, next) => {
     if (!isMatch) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid credentials. Password incorrect.',
+        message: 'Invalid credentials',
       });
     }
 

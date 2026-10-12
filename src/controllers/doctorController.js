@@ -1,5 +1,6 @@
 const Doctor = require('../models/Doctor');
 const Hospital = require('../models/Hospital');
+const { escapeRegex, parsePagination } = require('../utils/sanitize');
 
 /**
  * @desc    Get all doctors with filters
@@ -17,19 +18,19 @@ exports.getDoctors = async (req, res, next) => {
     }
 
     if (specialization) {
-      query.specialization = new RegExp(specialization, 'i');
+      query.specialization = new RegExp(escapeRegex(specialization), 'i');
     }
 
     if (isEmergencyAvailable !== undefined) {
       query.isEmergencyAvailable = isEmergencyAvailable === 'true';
     }
 
-    const skip = (parseInt(page, 10) - 1) * parseInt(limit, 10);
+    const { pageNum, limitNum, skip } = parsePagination(page, limit, 10);
 
     let findQuery = Doctor.find(query)
       .populate('hospital', 'name address contactPhone emergencyHotline')
       .skip(skip)
-      .limit(parseInt(limit, 10))
+      .limit(limitNum)
       .sort('name');
 
     const [doctors, total] = await Promise.all([
@@ -51,8 +52,8 @@ exports.getDoctors = async (req, res, next) => {
     res.status(200).json({
       success: true,
       total,
-      page: parseInt(page, 10),
-      totalPages: Math.ceil(total / parseInt(limit, 10)),
+      page: pageNum,
+      totalPages: Math.ceil(total / limitNum),
       count: filteredDoctors.length,
       data: filteredDoctors,
     });
@@ -108,15 +109,13 @@ exports.createDoctor = async (req, res, next) => {
     }
 
     // If hospital_admin, ensure they manage this hospital
-    if (
-      req.user.role === 'hospital_admin' &&
-      req.user.hospitalAssigned &&
-      req.user.hospitalAssigned.toString() !== hospital.toString()
-    ) {
-      return res.status(403).json({
-        success: false,
-        message: 'You are not authorized to add doctors to this hospital.',
-      });
+    if (req.user.role === 'hospital_admin') {
+      if (!req.user.hospitalAssigned || req.user.hospitalAssigned.toString() !== hospital.toString()) {
+        return res.status(403).json({
+          success: false,
+          message: 'You are not authorized to add doctors to this hospital.',
+        });
+      }
     }
 
     const doctor = await Doctor.create(req.body);
@@ -148,18 +147,40 @@ exports.updateDoctor = async (req, res, next) => {
     }
 
     // Role check for hospital_admin
-    if (
-      req.user.role === 'hospital_admin' &&
-      req.user.hospitalAssigned &&
-      req.user.hospitalAssigned.toString() !== doctor.hospital.toString()
-    ) {
-      return res.status(403).json({
-        success: false,
-        message: 'You are not authorized to edit doctors for this hospital.',
-      });
+    if (req.user.role === 'hospital_admin') {
+      if (!req.user.hospitalAssigned || req.user.hospitalAssigned.toString() !== doctor.hospital.toString()) {
+        return res.status(403).json({
+          success: false,
+          message: 'You are not authorized to edit doctors for this hospital.',
+        });
+      }
     }
 
-    doctor = await Doctor.findByIdAndUpdate(req.params.id, req.body, {
+    // Whitelist update fields
+    const allowedFields = [
+      'name',
+      'specialization',
+      'qualifications',
+      'experienceYears',
+      'consultationFee',
+      'availableDays',
+      'availableTimings',
+      'isEmergencyDuty',
+      'contactPhone',
+      'email',
+      'roomNumber',
+      'isAvailable',
+      'isActive',
+    ];
+
+    const updateData = {};
+    for (const field of allowedFields) {
+      if (req.body[field] !== undefined) {
+        updateData[field] = req.body[field];
+      }
+    }
+
+    doctor = await Doctor.findByIdAndUpdate(req.params.id, updateData, {
       new: true,
       runValidators: true,
     });
@@ -191,15 +212,13 @@ exports.deleteDoctor = async (req, res, next) => {
     }
 
     // Role check for hospital_admin
-    if (
-      req.user.role === 'hospital_admin' &&
-      req.user.hospitalAssigned &&
-      req.user.hospitalAssigned.toString() !== doctor.hospital.toString()
-    ) {
-      return res.status(403).json({
-        success: false,
-        message: 'You are not authorized to remove doctors from this hospital.',
-      });
+    if (req.user.role === 'hospital_admin') {
+      if (!req.user.hospitalAssigned || req.user.hospitalAssigned.toString() !== doctor.hospital.toString()) {
+        return res.status(403).json({
+          success: false,
+          message: 'You are not authorized to remove doctors from this hospital.',
+        });
+      }
     }
 
     await doctor.deleteOne();

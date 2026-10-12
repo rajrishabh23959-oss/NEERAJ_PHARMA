@@ -2,6 +2,7 @@ const EmergencyContact = require('../models/EmergencyContact');
 const Ambulance = require('../models/Ambulance');
 const Hospital = require('../models/Hospital');
 const { calculateHaversineDistance, isValidCoordinates } = require('../utils/geoUtils');
+const { escapeRegex, parsePagination, MAX_PAGE_LIMIT } = require('../utils/sanitize');
 
 /**
  * @desc    Get emergency contacts / helplines
@@ -24,16 +25,14 @@ exports.getEmergencyContacts = async (req, res, next) => {
 
     if (city) {
       query.$or = [
-        { city: new RegExp(city, 'i') },
+        { city: new RegExp(escapeRegex(city), 'i') },
         { city: 'All Cities' },
         { level: 'National' },
       ];
     }
 
     if (page || limit) {
-      const pageNum = parseInt(page, 10) || 1;
-      const limitNum = parseInt(limit, 10) || 10;
-      const skip = (pageNum - 1) * limitNum;
+      const { pageNum, limitNum, skip } = parsePagination(page, limit, 10);
 
       const [contacts, total] = await Promise.all([
         EmergencyContact.find(query)
@@ -91,7 +90,16 @@ exports.createEmergencyContact = async (req, res, next) => {
  */
 exports.updateEmergencyContact = async (req, res, next) => {
   try {
-    const contact = await EmergencyContact.findByIdAndUpdate(req.params.id, req.body, {
+    // Whitelist update fields
+    const allowedFields = ['name', 'category', 'numbers', 'description', 'city', 'state', 'isNational', 'priority', 'isActive'];
+    const updateData = {};
+    for (const field of allowedFields) {
+      if (req.body[field] !== undefined) {
+        updateData[field] = req.body[field];
+      }
+    }
+
+    const contact = await EmergencyContact.findByIdAndUpdate(req.params.id, updateData, {
       new: true,
       runValidators: true,
     });
@@ -177,8 +185,9 @@ exports.getAmbulances = async (req, res, next) => {
         },
       };
 
+      const safeLimit = Math.min(MAX_PAGE_LIMIT, Math.max(1, parseInt(limit, 10) || 50));
       const ambulances = await Ambulance.find(query)
-        .limit(parseInt(limit, 10) || 50)
+        .limit(safeLimit)
         .populate('baseHospital', 'name contactPhone emergencyHotline address');
 
       const results = ambulances.map((amb) => {
@@ -197,13 +206,11 @@ exports.getAmbulances = async (req, res, next) => {
     }
 
     if (city) {
-      query.city = new RegExp(city, 'i');
+      query.city = new RegExp(escapeRegex(city), 'i');
     }
 
     if (page || limit) {
-      const pageNum = parseInt(page, 10) || 1;
-      const limitNum = parseInt(limit, 10) || 10;
-      const skip = (pageNum - 1) * limitNum;
+      const { pageNum, limitNum, skip } = parsePagination(page, limit, 10);
 
       const [ambulances, total] = await Promise.all([
         Ambulance.find(query)
@@ -266,6 +273,16 @@ exports.createAmbulance = async (req, res, next) => {
       });
     }
 
+    // Role check: If hospital_admin, ensure they only register for their assigned hospital
+    if (req.user.role === 'hospital_admin') {
+      if (baseHospital && (!req.user.hospitalAssigned || req.user.hospitalAssigned.toString() !== baseHospital.toString())) {
+        return res.status(403).json({
+          success: false,
+          message: 'You can only register ambulances for your assigned hospital.',
+        });
+      }
+    }
+
     const ambulance = await Ambulance.create({
       vehicleNumber,
       type,
@@ -310,6 +327,16 @@ exports.updateAmbulanceStatus = async (req, res, next) => {
         success: false,
         message: `Ambulance not found with id of ${req.params.id}`,
       });
+    }
+
+    // Role check: If hospital_admin, ensure ownership
+    if (req.user.role === 'hospital_admin') {
+      if (ambulance.baseHospital && (!req.user.hospitalAssigned || req.user.hospitalAssigned.toString() !== ambulance.baseHospital.toString())) {
+        return res.status(403).json({
+          success: false,
+          message: 'You are not authorized to update ambulances for this hospital.',
+        });
+      }
     }
 
     if (status) {
@@ -405,14 +432,14 @@ exports.getQuickSos = async (req, res, next) => {
       nearestHospitals = await Hospital.find({
         isActive: true,
         'availability.isEmergencyAccepting': true,
-        'address.city': new RegExp(city, 'i'),
+        'address.city': new RegExp(escapeRegex(city), 'i'),
       })
         .limit(3)
         .select('name contactPhone emergencyHotline address availability location type');
 
       nearestAmbulances = await Ambulance.find({
         status: 'available',
-        city: new RegExp(city, 'i'),
+        city: new RegExp(escapeRegex(city), 'i'),
       })
         .limit(3)
         .select('vehicleNumber driverName contactNumber providerName type currentLocation');

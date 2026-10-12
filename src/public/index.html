@@ -12,11 +12,11 @@
 </head>
 <body>
   <!-- Urgent Emergency Alert Banner -->
-  <div class="emergency-banner" id="emergencyBanner">
+  <div class="emergency-banner" id="emergencyBanner" role="region" aria-label="Urgent Emergency Notification">
     <div class="banner-inner">
       <div class="banner-tag">🚨 24/7 CRITICAL RESPONSE</div>
       <div class="banner-text">National Medical Helpline: <strong>108 / 112</strong> | Unified Emergency Response Active</div>
-      <button class="banner-sos-btn" onclick="openSosModal()">⚡ 1-Tap Quick SOS</button>
+      <button class="banner-sos-btn" onclick="openSosModal()" aria-label="Trigger 1-Tap Quick SOS Emergency Response">⚡ 1-Tap Quick SOS</button>
     </div>
   </div>
 
@@ -44,8 +44,8 @@
       </nav>
 
       <div class="header-actions">
-        <button class="btn btn-outline-sm" id="authBtn" onclick="openAuthModal()">🔑 Admin / Login</button>
-        <button class="btn btn-sos-sm" onclick="triggerGpsSos()">⚡ Quick SOS</button>
+        <button class="btn btn-outline-sm" id="authBtn" onclick="openAuthModal()" aria-label="Login or manage hospital portal">🔑 Admin / Login</button>
+        <button class="btn btn-sos-sm" onclick="triggerGpsSos()" aria-label="Trigger instant GPS-based SOS">⚡ Quick SOS</button>
       </div>
     </div>
   </header>
@@ -94,10 +94,10 @@
             </div>
 
             <div class="search-actions">
-              <button class="btn btn-primary" onclick="searchHospitals()">
+              <button class="btn btn-primary" onclick="searchHospitals()" aria-label="Search hospitals with selected filters">
                 <span>Search</span>
               </button>
-              <button class="btn btn-geo" onclick="locateNearbyGps()" title="Use Current GPS Coordinates">
+              <button class="btn btn-geo" onclick="locateNearbyGps()" title="Use Current GPS Coordinates" aria-label="Find hospitals near my current GPS location">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon></svg>
                 <span>Near Me</span>
               </button>
@@ -105,13 +105,13 @@
           </div>
 
           <!-- Filter Pills -->
-          <div class="filter-pills">
-            <span class="filter-label">Quick Filters:</span>
-            <button class="pill" data-filter="hasIcu" onclick="togglePill(this)">🟢 Available ICU</button>
-            <button class="pill" data-filter="hasOxygen" onclick="togglePill(this)">💨 Oxygen Beds</button>
-            <button class="pill" data-filter="is24x7" onclick="togglePill(this)">⏰ 24x7 Open</button>
-            <button class="pill" data-filter="trauma" onclick="togglePill(this)">🏥 Trauma Center</button>
-            <button class="pill" data-filter="cardiology" onclick="togglePill(this)">❤️ Cardiology</button>
+          <div class="filter-pills" role="toolbar" aria-label="Quick hospital filters">
+            <span class="filter-label" id="quickFilterLabel">Quick Filters:</span>
+            <button class="pill" data-filter="hasIcu" onclick="togglePill(this)" aria-pressed="false" aria-label="Filter hospitals with available ICU beds">🟢 Available ICU</button>
+            <button class="pill" data-filter="hasOxygen" onclick="togglePill(this)" aria-pressed="false" aria-label="Filter hospitals with oxygen beds">💨 Oxygen Beds</button>
+            <button class="pill" data-filter="is24x7" onclick="togglePill(this)" aria-pressed="false" aria-label="Filter hospitals open 24x7">⏰ 24x7 Open</button>
+            <button class="pill" data-filter="trauma" onclick="togglePill(this)" aria-pressed="false" aria-label="Filter trauma center hospitals">🏥 Trauma Center</button>
+            <button class="pill" data-filter="cardiology" onclick="togglePill(this)" aria-pressed="false" aria-label="Filter cardiology specialty hospitals">❤️ Cardiology</button>
           </div>
         </div>
       </div>
@@ -159,8 +159,8 @@
           <p class="section-desc" id="resultsSubtext">Showing verified healthcare centers with real-time capacity</p>
         </div>
         <div class="results-meta">
-          <span class="status-indicator live"></span>
-          <span class="meta-label" id="resultsCount">Loading hospitals...</span>
+          <span class="status-indicator live" aria-hidden="true"></span>
+          <span class="meta-label" id="resultsCount" aria-live="polite">Loading hospitals...</span>
         </div>
       </div>
 
@@ -203,47 +203,47 @@
   </section>
 
   <!-- Quick SOS Modal -->
-  <div class="modal-overlay" id="sosModal">
+  <div class="modal-overlay" id="sosModal" role="dialog" aria-modal="true" aria-labelledby="sosModalTitle">
     <div class="modal-card sos-modal-card">
-      <button class="modal-close" onclick="closeSosModal()">×</button>
+      <button class="modal-close" onclick="closeSosModal()" aria-label="Close emergency SOS modal">×</button>
       <div class="sos-modal-header">
-        <div class="sos-pulse-ring">⚡</div>
+        <div class="sos-pulse-ring" aria-hidden="true">⚡</div>
         <div>
-          <h3 class="sos-title">Emergency 1-Tap SOS Activated</h3>
+          <h3 class="sos-title" id="sosModalTitle">Emergency 1-Tap SOS Activated</h3>
           <p class="sos-sub">Immediate dispatch response & nearest critical care triage</p>
         </div>
       </div>
-      <div class="sos-content" id="sosContent">
+      <div class="sos-content" id="sosContent" aria-live="polite">
         <div class="loading-spinner">Locating nearest emergency hospitals & available ambulances...</div>
       </div>
     </div>
   </div>
 
   <!-- Admin / User Auth Modal -->
-  <div class="modal-overlay" id="authModal">
+  <div class="modal-overlay" id="authModal" role="dialog" aria-modal="true" aria-labelledby="authModalTitle">
     <div class="modal-card">
-      <button class="modal-close" onclick="closeAuthModal()">×</button>
+      <button class="modal-close" onclick="closeAuthModal()" aria-label="Close authentication modal">×</button>
       <div class="modal-header">
         <h3 id="authModalTitle">Neerajpharma Portal Access</h3>
         <p class="modal-sub">Login to manage bed availability, hospital data, or view your saved bookmarks</p>
       </div>
 
-      <div class="auth-tabs">
-        <button class="auth-tab active" id="loginTabBtn" onclick="switchAuthTab('login')">Login</button>
-        <button class="auth-tab" id="registerTabBtn" onclick="switchAuthTab('register')">Register</button>
+      <div class="auth-tabs" role="tablist" aria-label="Authentication Options">
+        <button class="auth-tab active" id="loginTabBtn" role="tab" aria-selected="true" aria-controls="loginForm" onclick="switchAuthTab('login')">Login</button>
+        <button class="auth-tab" id="registerTabBtn" role="tab" aria-selected="false" aria-controls="registerForm" onclick="switchAuthTab('register')">Register</button>
       </div>
 
       <div class="auth-body" id="authBody">
-        <form id="loginForm" onsubmit="handleLogin(event)">
+        <form id="loginForm" role="tabpanel" aria-labelledby="loginTabBtn" onsubmit="handleLogin(event)">
           <div class="form-group">
-            <label>Email Address</label>
-            <input type="email" id="loginEmail" value="admin@neerajpharma.com" required />
+            <label for="loginEmail">Email Address</label>
+            <input type="email" id="loginEmail" value="admin@neerajpharma.com" required aria-required="true" />
           </div>
           <div class="form-group">
-            <label>Password</label>
-            <input type="password" id="loginPassword" value="AdminPassword123!" required />
+            <label for="loginPassword">Password</label>
+            <input type="password" id="loginPassword" value="AdminPassword123!" required aria-required="true" />
           </div>
-          <button type="submit" class="btn btn-primary full-width">Sign In</button>
+          <button type="submit" class="btn btn-primary full-width" aria-label="Sign in to your account">Sign In</button>
           <div class="demo-credentials">
             <strong>Default Demo Accounts:</strong><br/>
             • Super Admin: <code>admin@neerajpharma.com</code> / <code>AdminPassword123!</code><br/>
@@ -252,79 +252,81 @@
           </div>
         </form>
 
-        <form id="registerForm" onsubmit="handleRegister(event)" style="display: none;">
+        <form id="registerForm" role="tabpanel" aria-labelledby="registerTabBtn" onsubmit="handleRegister(event)" style="display: none;">
           <div class="form-group">
-            <label>Full Name</label>
-            <input type="text" id="regName" placeholder="Dr. John Doe" required />
+            <label for="regName">Full Name</label>
+            <input type="text" id="regName" placeholder="Dr. John Doe" required aria-required="true" />
           </div>
           <div class="form-group">
-            <label>Email Address</label>
-            <input type="email" id="regEmail" placeholder="john@example.com" required />
+            <label for="regEmail">Email Address</label>
+            <input type="email" id="regEmail" placeholder="john@example.com" required aria-required="true" />
           </div>
           <div class="form-group">
-            <label>Password (min 6 characters)</label>
-            <input type="password" id="regPassword" minlength="6" required />
+            <label for="regPassword">Password (min 6 characters)</label>
+            <input type="password" id="regPassword" minlength="6" required aria-required="true" />
           </div>
           <div class="form-group">
-            <label>Phone Number</label>
+            <label for="regPhone">Phone Number</label>
             <input type="tel" id="regPhone" placeholder="+91 98765 43210" />
           </div>
           <div class="form-group">
-            <label>Account Role</label>
-            <select id="regRole">
+            <label for="regRole">Account Role</label>
+            <select id="regRole" aria-label="Account Role">
               <option value="user">User / Patient</option>
-              <option value="hospital_admin">Hospital Administrator</option>
             </select>
+            <small style="color: var(--text-muted); display: block; margin-top: 5px; font-size: 0.85rem;">
+              ℹ️ Hospital Administrator accounts are verified and provisioned by Super Admin.
+            </small>
           </div>
-          <button type="submit" class="btn btn-primary full-width">Create Account</button>
+          <button type="submit" class="btn btn-primary full-width" aria-label="Register general user account">Create Account</button>
         </form>
       </div>
     </div>
   </div>
 
   <!-- Bed Availability Fast Update Modal (For Admins) -->
-  <div class="modal-overlay" id="bedUpdateModal">
+  <div class="modal-overlay" id="bedUpdateModal" role="dialog" aria-modal="true" aria-labelledby="bedModalTitle">
     <div class="modal-card">
-      <button class="modal-close" onclick="closeBedModal()">×</button>
+      <button class="modal-close" onclick="closeBedModal()" aria-label="Close bed update modal">×</button>
       <div class="modal-header">
-        <h3>⚡ Real-Time Bed Availability Update</h3>
+        <h3 id="bedModalTitle">⚡ Real-Time Bed Availability Update</h3>
         <p class="modal-sub" id="bedModalHospitalName">Update emergency capacity in real time</p>
       </div>
       <form id="bedUpdateForm" onsubmit="handleBedUpdate(event)">
         <input type="hidden" id="bedHospitalId" />
         <div class="form-row-2">
           <div class="form-group">
-            <label>Available Beds</label>
-            <input type="number" id="bedAvailable" min="0" required />
+            <label for="bedAvailable">Available Beds</label>
+            <input type="number" id="bedAvailable" min="0" required aria-required="true" />
           </div>
           <div class="form-group">
-            <label>Available ICU Beds</label>
-            <input type="number" id="bedIcuAvailable" min="0" required />
+            <label for="bedIcuAvailable">Available ICU Beds</label>
+            <input type="number" id="bedIcuAvailable" min="0" required aria-required="true" />
           </div>
         </div>
         <div class="form-row-2">
           <div class="form-group">
-            <label>Available Oxygen Beds</label>
-            <input type="number" id="bedOxygenAvailable" min="0" required />
+            <label for="bedOxygenAvailable">Available Oxygen Beds</label>
+            <input type="number" id="bedOxygenAvailable" min="0" required aria-required="true" />
           </div>
           <div class="form-group">
-            <label>Active Ambulances</label>
-            <input type="number" id="bedAmbulanceCount" min="0" required />
+            <label for="bedAmbulanceCount">Active Ambulances</label>
+            <input type="number" id="bedAmbulanceCount" min="0" required aria-required="true" />
           </div>
         </div>
         <div class="form-group checkbox-group">
-          <label class="toggle-label">
-            <input type="checkbox" id="bedEmergencyAccepting" />
+          <label class="toggle-label" for="bedEmergencyAccepting">
+            <input type="checkbox" id="bedEmergencyAccepting" aria-label="Currently Accepting Emergency Patients" />
             <span>Currently Accepting Emergency Patients</span>
           </label>
         </div>
-        <button type="submit" class="btn btn-primary full-width">Update Real-Time Capacity</button>
+        <button type="submit" class="btn btn-primary full-width" aria-label="Submit real-time capacity update">Update Real-Time Capacity</button>
       </form>
     </div>
   </div>
 
   <!-- Toast Notification Container -->
-  <div id="toastContainer" class="toast-container"></div>
+  <div id="toastContainer" class="toast-container" aria-live="assertive" role="status"></div>
 
   <!-- Footer -->
   <footer class="site-footer">

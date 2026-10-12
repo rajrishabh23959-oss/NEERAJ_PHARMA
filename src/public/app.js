@@ -231,10 +231,10 @@ function renderHospitals(hospitals, hasDistance = false) {
         </div>
 
         <div class="card-footer">
-          <a href="tel:${h.emergencyHotline || h.contactPhone}" class="btn-call">
+          <a href="tel:${h.emergencyHotline || h.contactPhone}" class="btn-call" aria-label="Call emergency hotline for ${h.name}">
             📞 Call Emergency (${h.emergencyHotline || h.contactPhone})
           </a>
-          <button class="btn-update-beds" onclick="openBedModal('${h._id}', '${h.name.replace(/'/g, "\\'")}', ${avail.availableBeds || 0}, ${avail.availableIcuBeds || 0}, ${avail.availableOxygenBeds || 0}, ${avail.ambulanceCount || 2}, ${avail.isEmergencyAccepting !== false})">
+          <button class="btn-update-beds" aria-label="Update real-time bed availability for ${h.name}" onclick="openBedModal('${h._id}', '${h.name.replace(/'/g, "\\'")}', ${avail.availableBeds || 0}, ${avail.availableIcuBeds || 0}, ${avail.availableOxygenBeds || 0}, ${avail.ambulanceCount || 2}, ${avail.isEmergencyAccepting !== false})">
             ⚙️ Update Beds
           </button>
         </div>
@@ -250,6 +250,7 @@ function togglePill(btn) {
   const filter = btn.getAttribute('data-filter');
   btn.classList.toggle('active');
   const isActive = btn.classList.contains('active');
+  btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
 
   if (filter === 'hasIcu') activeFilters.hasIcu = isActive;
   if (filter === 'hasOxygen') activeFilters.hasOxygen = isActive;
@@ -262,7 +263,12 @@ function togglePill(btn) {
 
 function resetFilters() {
   activeFilters = { hasIcu: false, hasOxygen: false, is24x7: false, specialty: '', facility: '' };
-  document.querySelectorAll('.pill').forEach((p) => p.classList.remove('active'));
+  document.querySelectorAll('.pill').forEach((p) => {
+    p.classList.remove('active');
+    p.setAttribute('aria-pressed', 'false');
+  });
+  searchHospitals();
+}
   document.getElementById('searchInput').value = '';
   document.getElementById('citySelect').value = '';
   fetchHospitals();
@@ -299,7 +305,7 @@ function renderAmbulances(ambulances) {
         <strong>Driver:</strong> ${amb.driverName}<br/>
         <strong>Base City:</strong> ${amb.city}
       </div>
-      <a href="tel:${amb.contactNumber}" class="btn btn-primary full-width">
+      <a href="tel:${amb.contactNumber}" class="btn btn-primary full-width" aria-label="Dispatch ambulance vehicle ${amb.vehicleNumber}">
         📞 Dispatch Call (${amb.contactNumber})
       </a>
     `;
@@ -331,10 +337,10 @@ function renderHelplines(contacts) {
       <div>
         <span class="hl-category">${c.category}</span>
         <h4 class="hl-title">${c.title}</h4>
-        <a href="tel:${c.number}" class="hl-number">${c.number}</a>
+        <a href="tel:${c.number}" class="hl-number" aria-label="Call emergency helpline ${c.name || c.title} at ${c.number}">${c.number}</a>
         <p style="font-size: 0.8125rem; color: var(--text-muted);">${c.description || ''}</p>
       </div>
-      <a href="tel:${c.number}" class="btn btn-primary full-width" style="margin-top: 12px;">
+      <a href="tel:${c.number}" class="btn btn-primary full-width" style="margin-top: 12px;" aria-label="Call ${c.name || c.title} at ${c.number}">
         📞 Call ${c.number}
       </a>
     `;
@@ -445,16 +451,25 @@ function closeAuthModal() {
 }
 
 function switchAuthTab(tab) {
+  const loginBtn = document.getElementById('loginTabBtn');
+  const registerBtn = document.getElementById('registerTabBtn');
+  const loginForm = document.getElementById('loginForm');
+  const registerForm = document.getElementById('registerForm');
+
   if (tab === 'login') {
-    document.getElementById('loginTabBtn').classList.add('active');
-    document.getElementById('registerTabBtn').classList.remove('active');
-    document.getElementById('loginForm').style.display = 'block';
-    document.getElementById('registerForm').style.display = 'none';
+    loginBtn.classList.add('active');
+    loginBtn.setAttribute('aria-selected', 'true');
+    registerBtn.classList.remove('active');
+    registerBtn.setAttribute('aria-selected', 'false');
+    loginForm.style.display = 'block';
+    registerForm.style.display = 'none';
   } else {
-    document.getElementById('loginTabBtn').classList.remove('active');
-    document.getElementById('registerTabBtn').classList.add('active');
-    document.getElementById('loginForm').style.display = 'none';
-    document.getElementById('registerForm').style.display = 'block';
+    loginBtn.classList.remove('active');
+    loginBtn.setAttribute('aria-selected', 'false');
+    registerBtn.classList.add('active');
+    registerBtn.setAttribute('aria-selected', 'true');
+    loginForm.style.display = 'none';
+    registerForm.style.display = 'block';
   }
 }
 

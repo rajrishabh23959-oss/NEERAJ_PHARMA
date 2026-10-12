@@ -3,6 +3,7 @@ const Hospital = require('../models/Hospital');
 const Doctor = require('../models/Doctor');
 const Ambulance = require('../models/Ambulance');
 const EmergencyContact = require('../models/EmergencyContact');
+const { escapeRegex, parsePagination } = require('../utils/sanitize');
 
 /**
  * @desc    Get aggregate dashboard metrics
@@ -107,21 +108,22 @@ exports.getUsers = async (req, res, next) => {
     }
 
     if (search) {
+      const safeSearch = escapeRegex(search);
       query.$or = [
-        { name: new RegExp(search, 'i') },
-        { email: new RegExp(search, 'i') },
-        { phone: new RegExp(search, 'i') },
+        { name: new RegExp(safeSearch, 'i') },
+        { email: new RegExp(safeSearch, 'i') },
+        { phone: new RegExp(safeSearch, 'i') },
       ];
     }
 
-    const skip = (parseInt(page, 10) - 1) * parseInt(limit, 10);
+    const { pageNum, limitNum, skip } = parsePagination(page, limit, 10);
 
     const [users, total] = await Promise.all([
       User.find(query)
         .select('-password')
         .populate('hospitalAssigned', 'name address city')
         .skip(skip)
-        .limit(parseInt(limit, 10))
+        .limit(limitNum)
         .sort('-createdAt'),
       User.countDocuments(query),
     ]);
@@ -129,8 +131,8 @@ exports.getUsers = async (req, res, next) => {
     res.status(200).json({
       success: true,
       total,
-      page: parseInt(page, 10),
-      totalPages: Math.ceil(total / parseInt(limit, 10)),
+      page: pageNum,
+      totalPages: Math.ceil(total / limitNum),
       count: users.length,
       data: users,
     });

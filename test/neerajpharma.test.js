@@ -157,6 +157,43 @@ describe('2. Hospital Management CRUD & Real-Time Availability', () => {
     expect(res.body.data.contactPhone).toBe('+91 124 496 9999');
   });
 
+  it('should whitelist update fields and disallow unauthorized fields like isVerified on hospital update', async () => {
+    const res = await request(app)
+      .put(`/api/v1/hospitals/${createdHospitalId}`)
+      .set('Authorization', `Bearer ${superAdminToken}`)
+      .send({
+        contactPhone: '+91 124 496 8888',
+        isVerified: true,
+      })
+      .expect(200);
+
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.contactPhone).toBe('+91 124 496 8888');
+    expect(res.body.data.isVerified).toBe(false);
+  });
+
+  it('should enforce hospital ownership and block hospital_admin from modifying unassigned hospital', async () => {
+    const res = await request(app)
+      .put(`/api/v1/hospitals/${createdHospitalId}`)
+      .set('Authorization', `Bearer ${hospitalAdminToken}`)
+      .send({ contactPhone: '+91 124 496 7777' })
+      .expect(403);
+
+    expect(res.body.success).toBe(false);
+    expect(res.body.message).toMatch(/not authorized to update this hospital/i);
+  });
+
+  it('should enforce hospital ownership on bed availability updates', async () => {
+    const res = await request(app)
+      .patch(`/api/v1/hospitals/${createdHospitalId}/availability`)
+      .set('Authorization', `Bearer ${hospitalAdminToken}`)
+      .send({ availableIcuBeds: 99 })
+      .expect(403);
+
+    expect(res.body.success).toBe(false);
+    expect(res.body.message).toMatch(/not authorized to update emergency availability/i);
+  });
+
   it('should update real-time bed and ICU availability', async () => {
     const res = await request(app)
       .patch(`/api/v1/hospitals/${createdHospitalId}/availability`)
@@ -275,6 +312,24 @@ describe('5. Search & Multi-Filter APIs with Pagination', () => {
     expect(res.body.success).toBe(true);
     expect(res.body.count).toBeGreaterThan(0);
   });
+
+  it('should safely escape special regex characters in search parameters without errors', async () => {
+    const res = await request(app)
+      .get('/api/v1/hospitals/search?q=AIIMS+(Cardio)*[?]+&city=Delhi')
+      .expect(200);
+
+    expect(res.body.success).toBe(true);
+  });
+
+  it('should cap pagination to maximum 100 items per page', async () => {
+    const res = await request(app)
+      .get('/api/v1/hospitals?limit=5000&page=-2')
+      .expect(200);
+
+    expect(res.body.success).toBe(true);
+    expect(res.body.page).toBe(1);
+    expect(res.body.totalPages).toBeGreaterThanOrEqual(1);
+  });
 });
 
 describe('6. JWT Authentication, Hashing & Role-Based Access Control (RBAC)', () => {
@@ -305,6 +360,43 @@ describe('6. JWT Authentication, Hashing & Role-Based Access Control (RBAC)', ()
       .expect(401);
 
     expect(res.body.success).toBe(false);
+  });
+
+  it('should return generic error message for invalid credentials on both non-existent user and wrong password', async () => {
+    const wrongUserRes = await request(app)
+      .post('/api/v1/auth/login')
+      .send({
+        email: 'nonexistent_user_999@neerajpharma.com',
+        password: 'SomePassword123!',
+      })
+      .expect(401);
+
+    expect(wrongUserRes.body.message).toBe('Invalid credentials');
+
+    const wrongPassRes = await request(app)
+      .post('/api/v1/auth/login')
+      .send({
+        email: 'admin@neerajpharma.com',
+        password: 'WrongPassword123!',
+      })
+      .expect(401);
+
+    expect(wrongPassRes.body.message).toBe('Invalid credentials');
+  });
+
+  it('should block self-registration as hospital_admin (403)', async () => {
+    const res = await request(app)
+      .post('/api/v1/auth/register')
+      .send({
+        name: 'Attempted Hospital Admin',
+        email: `hosp_admin_${Date.now()}@test.com`,
+        password: 'Password123!',
+        role: 'hospital_admin',
+      })
+      .expect(403);
+
+    expect(res.body.success).toBe(false);
+    expect(res.body.message).toMatch(/hospital administrators must be provisioned/i);
   });
 
   it('should block super_admin registration without admin secret (403)', async () => {
@@ -396,10 +488,23 @@ describe('8. Input Validation with Express-Validator', () => {
 });
 
 describe('9. Security Hardening (Helmet, Bcrypt, Env Secrets, CORS, Rate Limit)', () => {
-  it('should return Helmet security headers', async () => {
+  it('should return Helmet security headers and Content-Security-Policy (CSP)', async () => {
     const res = await request(app).get('/health');
     expect(res.headers['x-content-type-options']).toBe('nosniff');
     expect(res.headers['x-frame-options']).toBeDefined();
+    expect(res.headers['content-security-policy']).toBeDefined();
+    expect(res.headers['content-security-policy']).toContain("default-src 'self'");
+  });
+
+  it('should fail fast if required secrets are missing', () => {
+    const originalSecret = process.env.JWT_SECRET;
+    delete process.env.JWT_SECRET;
+    try {
+      const user = new User({ name: 'Test', email: 't@t.com', role: 'user' });
+      expect(() => user.getSignedJwtToken()).toThrow(/JWT_SECRET environment variable is missing/i);
+    } finally {
+      process.env.JWT_SECRET = originalSecret;
+    }
   });
 
   it('should verify CORS header is present', async () => {
@@ -436,5 +541,18 @@ describe('10. Interactive Documentation & Service Health Check', () => {
   it('should serve Swagger UI interactive documentation at /api-docs', async () => {
     const res = await request(app).get('/api-docs/');
     expect([200, 301]).toContain(res.status);
+  });
+
+  it('should include ARIA attributes, semantic form labels, and modal accessibility in demo frontend', () => {
+    const fs = require('fs');
+    const path = require('path');
+    const html = fs.readFileSync(path.join(__dirname, '../src/public/index.html'), 'utf8');
+
+    expect(html).toContain('aria-label=');
+    expect(html).toContain('role="dialog"');
+    expect(html).toContain('aria-modal="true"');
+    expect(html).toContain('for="loginEmail"');
+    expect(html).toContain('for="loginPassword"');
+    expect(html).toContain('for="bedAvailable"');
   });
 });

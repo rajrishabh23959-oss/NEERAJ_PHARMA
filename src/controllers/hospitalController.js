@@ -1,5 +1,6 @@
 const Hospital = require('../models/Hospital');
 const { calculateHaversineDistance, isValidCoordinates } = require('../utils/geoUtils');
+const { escapeRegex, parsePagination, MAX_PAGE_LIMIT } = require('../utils/sanitize');
 
 /**
  * @desc    Find nearby hospitals using latitude, longitude, and radius
@@ -43,11 +44,11 @@ exports.getNearbyHospitals = async (req, res, next) => {
     };
 
     if (specialty) {
-      query.specialties = { $regex: new RegExp(specialty, 'i') };
+      query.specialties = { $regex: new RegExp(escapeRegex(specialty), 'i') };
     }
 
     if (facility) {
-      query.facilities = { $regex: new RegExp(facility, 'i') };
+      query.facilities = { $regex: new RegExp(escapeRegex(facility), 'i') };
     }
 
     if (hasIcu === 'true') {
@@ -66,8 +67,10 @@ exports.getNearbyHospitals = async (req, res, next) => {
       query.type = type;
     }
 
+    const safeLimit = Math.min(MAX_PAGE_LIMIT, Math.max(1, parseInt(limit, 10) || 20));
+
     const hospitals = await Hospital.find(query)
-      .limit(parseInt(limit, 10))
+      .limit(safeLimit)
       .populate('doctors')
       .populate('ambulances');
 
@@ -117,7 +120,8 @@ exports.searchHospitals = async (req, res, next) => {
 
     // Keyword search across multiple fields
     if (q) {
-      const regex = new RegExp(q, 'i');
+      const safeQ = escapeRegex(q);
+      const regex = new RegExp(safeQ, 'i');
       query.$or = [
         { name: regex },
         { 'address.city': regex },
@@ -129,11 +133,11 @@ exports.searchHospitals = async (req, res, next) => {
     }
 
     if (city) {
-      query['address.city'] = new RegExp(city, 'i');
+      query['address.city'] = new RegExp(escapeRegex(city), 'i');
     }
 
     if (state) {
-      query['address.state'] = new RegExp(state, 'i');
+      query['address.state'] = new RegExp(escapeRegex(state), 'i');
     }
 
     if (type) {
@@ -141,11 +145,11 @@ exports.searchHospitals = async (req, res, next) => {
     }
 
     if (specialty) {
-      query.specialties = { $regex: new RegExp(specialty, 'i') };
+      query.specialties = { $regex: new RegExp(escapeRegex(specialty), 'i') };
     }
 
     if (facility) {
-      query.facilities = { $regex: new RegExp(facility, 'i') };
+      query.facilities = { $regex: new RegExp(escapeRegex(facility), 'i') };
     }
 
     if (minBeds) {
@@ -163,21 +167,21 @@ exports.searchHospitals = async (req, res, next) => {
     const sortOptions = {};
     sortOptions[sortBy] = sortOrder === 'desc' ? -1 : 1;
 
-    const skip = (parseInt(page, 10) - 1) * parseInt(limit, 10);
+    const { pageNum, limitNum, skip } = parsePagination(page, limit, 10);
 
     const [hospitals, total] = await Promise.all([
       Hospital.find(query)
         .sort(sortOptions)
         .skip(skip)
-        .limit(parseInt(limit, 10)),
+        .limit(limitNum),
       Hospital.countDocuments(query),
     ]);
 
     res.status(200).json({
       success: true,
       total,
-      page: parseInt(page, 10),
-      totalPages: Math.ceil(total / parseInt(limit, 10)),
+      page: pageNum,
+      totalPages: Math.ceil(total / limitNum),
       count: hospitals.length,
       data: hospitals,
     });
@@ -193,14 +197,12 @@ exports.searchHospitals = async (req, res, next) => {
  */
 exports.getHospitals = async (req, res, next) => {
   try {
-    const page = parseInt(req.query.page, 10) || 1;
-    const limit = parseInt(req.query.limit, 10) || 10;
-    const skip = (page - 1) * limit;
+    const { pageNum, limitNum, skip } = parsePagination(req.query.page, req.query.limit, 10);
 
     const [hospitals, total] = await Promise.all([
       Hospital.find({ isActive: true })
         .skip(skip)
-        .limit(limit)
+        .limit(limitNum)
         .sort('-createdAt'),
       Hospital.countDocuments({ isActive: true }),
     ]);
@@ -208,8 +210,8 @@ exports.getHospitals = async (req, res, next) => {
     res.status(200).json({
       success: true,
       total,
-      page,
-      totalPages: Math.ceil(total / limit),
+      page: pageNum,
+      totalPages: Math.ceil(total / limitNum),
       count: hospitals.length,
       data: hospitals,
     });
@@ -334,19 +336,41 @@ exports.updateHospital = async (req, res, next) => {
     }
 
     // Role check: If user is hospital_admin, ensure they manage this hospital
-    if (
-      req.user.role === 'hospital_admin' &&
-      req.user.hospitalAssigned &&
-      req.user.hospitalAssigned.toString() !== hospital._id.toString()
-    ) {
-      return res.status(403).json({
-        success: false,
-        message: 'You are not authorized to update this hospital.',
-      });
+    if (req.user.role === 'hospital_admin') {
+      if (!req.user.hospitalAssigned || req.user.hospitalAssigned.toString() !== hospital._id.toString()) {
+        return res.status(403).json({
+          success: false,
+          message: 'You are not authorized to update this hospital.',
+        });
+      }
+    }
+
+    // Whitelist permitted update fields (prevent tampering with isVerified, verifiedBy, rating, etc.)
+    const allowedFields = [
+      'name',
+      'registrationNumber',
+      'type',
+      'address',
+      'contactPhone',
+      'emergencyHotline',
+      'email',
+      'website',
+      'operatingHours',
+      'is24x7',
+      'facilities',
+      'specialties',
+      'image',
+      'isActive',
+    ];
+
+    const updateData = {};
+    for (const field of allowedFields) {
+      if (req.body[field] !== undefined) {
+        updateData[field] = req.body[field];
+      }
     }
 
     // Handle coordinate updates if provided
-    const updateData = { ...req.body };
     if (req.body.latitude !== undefined && req.body.longitude !== undefined) {
       if (!isValidCoordinates(req.body.latitude, req.body.longitude)) {
         return res.status(400).json({
@@ -358,8 +382,6 @@ exports.updateHospital = async (req, res, next) => {
         type: 'Point',
         coordinates: [parseFloat(req.body.longitude), parseFloat(req.body.latitude)],
       };
-      delete updateData.latitude;
-      delete updateData.longitude;
     }
 
     hospital = await Hospital.findByIdAndUpdate(req.params.id, updateData, {
@@ -423,6 +445,16 @@ exports.updateAvailability = async (req, res, next) => {
         success: false,
         message: `Hospital not found with id of ${req.params.id}`,
       });
+    }
+
+    // Role check: If user is hospital_admin, ensure they manage this hospital
+    if (req.user.role === 'hospital_admin') {
+      if (!req.user.hospitalAssigned || req.user.hospitalAssigned.toString() !== hospital._id.toString()) {
+        return res.status(403).json({
+          success: false,
+          message: 'You are not authorized to update emergency availability for this hospital.',
+        });
+      }
     }
 
     if (availableBeds !== undefined) hospital.availability.availableBeds = availableBeds;

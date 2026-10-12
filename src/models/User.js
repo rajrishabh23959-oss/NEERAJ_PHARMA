@@ -76,9 +76,12 @@ userSchema.pre('save', async function () {
 
 // Sign JWT and return
 userSchema.methods.getSignedJwtToken = function () {
+  if (!process.env.JWT_SECRET) {
+    throw new Error('JWT_SECRET environment variable is missing.');
+  }
   return jwt.sign(
     { id: this._id, role: this.role },
-    process.env.JWT_SECRET || 'neerajpharma_super_secure_jwt_secret_key_2026',
+    process.env.JWT_SECRET,
     {
       expiresIn: process.env.JWT_EXPIRE || '30d',
     }

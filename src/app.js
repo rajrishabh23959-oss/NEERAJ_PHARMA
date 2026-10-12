@@ -16,12 +16,29 @@ const emergencyRoutes = require('./routes/emergencyRoutes');
 const doctorRoutes = require('./routes/doctorRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 
+// Fail-fast environment variable validation
+const requiredEnvVars = ['JWT_SECRET', 'ADMIN_SECRET'];
+for (const envVar of requiredEnvVars) {
+  if (!process.env[envVar]) {
+    throw new Error(`CRITICAL CONFIGURATION ERROR: Missing required environment variable '${envVar}'.`);
+  }
+}
+
 const app = express();
 
-// Security Headers with Helmet (configured to allow Swagger UI and frontend demo resources)
+// Security Headers with Helmet including Content Security Policy (CSP)
 app.use(
   helmet({
-    contentSecurityPolicy: false,
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'"],
+        styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+        fontSrc: ["'self'", 'https://fonts.gstatic.com'],
+        imgSrc: ["'self'", 'data:', 'https://images.unsplash.com', 'https:'],
+        connectSrc: ["'self'"],
+      },
+    },
     crossOriginEmbedderPolicy: false,
   })
 );
