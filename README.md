@@ -25,14 +25,20 @@ Backend service for the **Responsive Healthcare & Emergency HospitalLocator Webs
    - Multi-criteria queries matching keywords, city, facilities, specialties, and 24x7 emergency acceptance.
 6. **User Authentication & RBAC**:
    - JWT tokens, password hashing with `bcryptjs`, and role-based access control (`user`, `hospital_admin`, `super_admin`).
-7. **Admin Management**:
+   - Blocked self-registration as `hospital_admin`; generic 401 login errors without user enumeration or leaking internal `err.message`.
+7. **Security Hardening**:
+   - Helmet Content Security Policy (CSP), rate limiting, and CORS strictly requiring explicit `CLIENT_URL` in production (wildcard `*` disallowed).
+   - Fail-fast startup validation on weak or placeholder environment secrets.
+   - Enforced hospital ownership for `hospital_admin` and strict field whitelisting on hospital/doctor updates.
+   - Regex escaping on search inputs and capped pagination (max 100 items/page).
+8. **Admin Management**:
    - Healthcare system metrics, hospital verification, and user management.
-8. **Documentation & Testing**:
+9. **Documentation & Testing**:
    - Interactive Swagger documentation at `/api-docs`.
    - Complete Postman collection (`Neerajpharma_HospitalLocator.postman_collection.json`).
    - Automated test suite covering all core requirements.
-9. **Frontend Integration Showcase**:
-   - Responsive web application served at `http://localhost:5000` demonstrating full integration with the backend REST APIs.
+10. **Frontend Integration Showcase**:
+   - Responsive web application served at `http://localhost:5000` demonstrating full integration with ARIA accessibility compliance.
 
 ---
 

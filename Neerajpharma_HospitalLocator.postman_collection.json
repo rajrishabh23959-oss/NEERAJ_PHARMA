@@ -124,6 +124,30 @@
           }
         },
         {
+          "name": "Attempt Hospital Admin Self-Registration (Blocked 403)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Unauthorized Hospital Admin\",\n  \"email\": \"bad.hosp.admin@example.com\",\n  \"password\": \"Password123!\",\n  \"role\": \"hospital_admin\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/v1/auth/register", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "register"] }
+          }
+        },
+        {
+          "name": "Login Invalid Credentials (Generic 401 Test)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"nonexistent.user@example.com\",\n  \"password\": \"WrongPassword123!\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/v1/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "login"] }
+          }
+        },
+        {
           "name": "Get Current User Profile",
           "request": {
             "method": "GET",

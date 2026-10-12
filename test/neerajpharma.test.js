@@ -430,6 +430,17 @@ describe('6. JWT Authentication, Hashing & Role-Based Access Control (RBAC)', ()
 
     expect(res.body.success).toBe(false);
   });
+
+  it('should reject requests with invalid token without leaking err.message (401)', async () => {
+    const res = await request(app)
+      .get('/api/v1/auth/me')
+      .set('Authorization', 'Bearer invalid.malformed.token')
+      .expect(401);
+
+    expect(res.body.success).toBe(false);
+    expect(res.body.message).toBe('Invalid or expired authentication token.');
+    expect(res.body.error).toBeUndefined();
+  });
 });
 
 describe('7. Admin Management & Health Metrics', () => {
@@ -510,6 +521,24 @@ describe('9. Security Hardening (Helmet, Bcrypt, Env Secrets, CORS, Rate Limit)'
   it('should verify CORS header is present', async () => {
     const res = await request(app).get('/health');
     expect(res.headers['access-control-allow-origin']).toBeDefined();
+  });
+
+  it('should require explicit CLIENT_URL in production and disallow wildcard', () => {
+    const { getCorsOriginConfig } = require('../src/utils/sanitize');
+    expect(() => getCorsOriginConfig('production', '*')).toThrow(/Explicit CLIENT_URL is required in production/i);
+    expect(() => getCorsOriginConfig('production', '')).toThrow(/Explicit CLIENT_URL is required in production/i);
+    expect(getCorsOriginConfig('production', 'https://neerajpharma.com')).toBe('https://neerajpharma.com');
+    expect(getCorsOriginConfig('development', '*')).toBe('*');
+  });
+
+  it('should fail fast on weak or placeholder secrets', () => {
+    const { validateSecretStrength } = require('../src/utils/sanitize');
+    expect(() => validateSecretStrength('JWT_SECRET', 'short', 32)).toThrow(/too weak/i);
+    expect(() => validateSecretStrength('JWT_SECRET', 'your_secure_jwt_secret_minimum_32_characters_long_placeholder', 32)).toThrow(/placeholder/i);
+    expect(() => validateSecretStrength('ADMIN_SECRET', 'admin123_padded_long_string', 16)).toThrow(/insecure/i);
+    expect(() => validateSecretStrength('ADMIN_SECRET', 'short', 16)).toThrow(/too weak/i);
+    expect(() => validateSecretStrength('JWT_SECRET', 'neerajpharma_super_secure_jwt_secret_key_2026', 32)).not.toThrow();
+    expect(() => validateSecretStrength('ADMIN_SECRET', 'neeraj_super_admin_secret_2026', 16)).not.toThrow();
   });
 
   it('should ensure password is never leaked and properly hashed with bcrypt', async () => {

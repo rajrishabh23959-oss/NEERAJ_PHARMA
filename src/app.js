@@ -16,13 +16,14 @@ const emergencyRoutes = require('./routes/emergencyRoutes');
 const doctorRoutes = require('./routes/doctorRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 
-// Fail-fast environment variable validation
-const requiredEnvVars = ['JWT_SECRET', 'ADMIN_SECRET'];
-for (const envVar of requiredEnvVars) {
-  if (!process.env[envVar]) {
-    throw new Error(`CRITICAL CONFIGURATION ERROR: Missing required environment variable '${envVar}'.`);
-  }
-}
+const { validateSecretStrength, getCorsOriginConfig } = require('./utils/sanitize');
+
+// Fail-fast environment variable & secret strength validation
+validateSecretStrength('JWT_SECRET', process.env.JWT_SECRET, 32);
+validateSecretStrength('ADMIN_SECRET', process.env.ADMIN_SECRET, 16);
+
+// Validate and configure CORS origin (strictly requires explicit CLIENT_URL in production)
+const corsOrigin = getCorsOriginConfig(process.env.NODE_ENV, process.env.CLIENT_URL);
 
 const app = express();
 
@@ -46,7 +47,7 @@ app.use(
 // Enable Cross-Origin Resource Sharing
 app.use(
   cors({
-    origin: process.env.CLIENT_URL || '*',
+    origin: corsOrigin,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
   })

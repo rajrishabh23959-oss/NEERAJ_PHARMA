@@ -11,11 +11,15 @@ Production-grade RESTful API service developed for the **Responsive Healthcare &
 - **Authentication**: JWT (JSON Web Tokens) with `Authorization: Bearer <token>`
 - **Geospatial Engine**: MongoDB `2dsphere` index with Haversine great-circle distance computation in kilometers.
 - **Security Hardening**:
-  - `helmet`: Sets HTTP security headers (CSP, XSS, Frameguard, etc.).
+  - `helmet`: Sets HTTP security headers with explicit Content Security Policy (CSP).
   - `express-rate-limit`: Prevents DDoS and brute-force credential stuffing (100 req/15min API general, 20 req/15min on auth endpoints).
   - `bcryptjs`: Password hashing with 10 salt rounds; passwords excluded from queries by default (`select: false`).
-  - `cors`: Configurable cross-origin resource access via environment variables.
+  - `cors`: Explicit `CLIENT_URL` origin strictly required in production (wildcard `*` disallowed).
   - `express-validator`: Rigorous input validation and sanitization on all mutating endpoints.
+  - `Secret Strength Enforcement`: Fails fast on application startup if `JWT_SECRET` (< 32 chars) or `ADMIN_SECRET` (< 16 chars) are weak or placeholders.
+  - `Generic Auth Errors`: Uniform `Invalid credentials` (HTTP 401) returned with no internal error message leakage (`err.message` stripped).
+  - `Hospital Ownership Enforcement`: Hospital administrators can only modify their assigned hospital.
+  - `Pagination Limits`: Safely capped at a maximum of 100 items per page across all endpoints.
 
 ---
 
@@ -25,8 +29,8 @@ Production-grade RESTful API service developed for the **Responsive Healthcare &
 
 | Method | Endpoint | Access | Description |
 | :--- | :--- | :--- | :--- |
-| `POST` | `/api/v1/auth/register` | Public | Register new user or hospital admin (super_admin requires `adminSecret`) |
-| `POST` | `/api/v1/auth/login` | Public | Authenticate user and receive JWT |
+| `POST` | `/api/v1/auth/register` | Public | Register new patient/user account (hospital_admin self-registration blocked; super_admin requires valid `adminSecret`) |
+| `POST` | `/api/v1/auth/login` | Public | Authenticate user and receive JWT (generic 401 error on invalid credentials) |
 | `GET` | `/api/v1/auth/me` | Private | Retrieve authenticated user profile |
 | `PUT` | `/api/v1/auth/updatedetails` | Private | Update name, phone, emergency contacts |
 | `PUT` | `/api/v1/auth/updatepassword` | Private | Update password with old password verification |
