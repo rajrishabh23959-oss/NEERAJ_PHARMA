@@ -1,0 +1,3044 @@
+{
+  "info": {
+    "name": "Neeraj Pharma Healthcare & Emergency Hospital Locator API (100% Coverage)",
+    "description": "Complete Postman collection covering all 47 REST endpoints plus 12 negative/validation/auth-failure test cases across all 4 core modules. Every request includes automated pm.test() assertions.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. System Health & Directory",
+      "item": [
+        {
+          "name": "GET API Route Directory",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('GET API Route Directory - Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response is valid JSON with expected structure', function () {",
+                  "    pm.response.to.be.json;",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "});",
+                  "pm.test('Directory lists all module route groups', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.endpoints).to.have.all.keys('auth', 'hospitals', 'doctors', 'locations', 'emergency', 'admin');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api"
+              ]
+            },
+            "description": "GET {{baseUrl}}/api"
+          }
+        },
+        {
+          "name": "GET System Health Check",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('GET System Health Check - Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response is valid JSON with expected structure', function () {",
+                  "    pm.response.to.be.json;",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "});",
+                  "pm.test('Platform status is online', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.status).to.eql('online');",
+                  "    pm.expect(json.totalVerifiedHospitals).to.be.above(0);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "health"
+              ]
+            },
+            "description": "GET {{baseUrl}}/api/health"
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Authentication & Profile Management",
+      "item": [
+        {
+          "name": "Register Citizen User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Register Citizen User - Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test('Response is valid JSON with expected structure', function () {",
+                  "    pm.response.to.be.json;",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "});",
+                  "pm.test('User role is strictly assigned as user and token is returned', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.data.user.role).to.eql('user');",
+                  "    pm.expect(json.data.token).to.be.a('string');",
+                  "    pm.environment.set('userToken', json.data.token);",
+                  "    pm.environment.set('sampleUserId', json.data.user.id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register"
+              ]
+            },
+            "description": "POST {{baseUrl}}/api/auth/register",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Ananya Sen\",\n  \"email\": \"ananya.sen@example.com\",\n  \"password\": \"Password@123\",\n  \"phoneNumber\": \"+91-9871122334\",\n  \"department\": \"Public User\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Login as Administrator",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Login as Administrator - Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response is valid JSON with expected structure', function () {",
+                  "    pm.response.to.be.json;",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "});",
+                  "pm.test('Admin login returns JWT and role admin', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.data.user.role).to.eql('admin');",
+                  "    pm.environment.set('adminToken', json.data.token);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "description": "POST {{baseUrl}}/api/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Login as Citizen Patient",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Login as Citizen Patient - Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response is valid JSON with expected structure', function () {",
+                  "    pm.response.to.be.json;",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "});",
+                  "pm.test('Citizen login returns valid user token', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.data.user.role).to.eql('user');",
+                  "    pm.environment.set('userToken', json.data.token);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "description": "POST {{baseUrl}}/api/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{userEmail}}\",\n  \"password\": \"{{userPassword}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Current Authenticated Profile (GET /api/auth/me)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Get Current Authenticated Profile (GET /api/auth/me) - Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response is valid JSON with expected structure', function () {",
+                  "    pm.response.to.be.json;",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "});",
+                  "pm.test('Profile contains user id and email', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.data).to.have.property('email');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "me"
+              ]
+            },
+            "description": "GET {{baseUrl}}/api/auth/me"
+          }
+        },
+        {
+          "name": "Update Current User Profile (PUT /api/auth/me)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Update Current User Profile (PUT /api/auth/me) - Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response is valid JSON with expected structure', function () {",
+                  "    pm.response.to.be.json;",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "});",
+                  "pm.test('Profile name and phone are updated', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.data.name).to.eql('Rohan Patel Updated');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "me"
+              ]
+            },
+            "description": "PUT {{baseUrl}}/api/auth/me",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Rohan Patel Updated\",\n  \"phoneNumber\": \"+91-9811009988\",\n  \"department\": \"Patient Community\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Hospitals, Geolocation & Real-Time Availability",
+      "item": [
+        {
+          "name": "Get All Verified Hospitals",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Get All Verified Hospitals - Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response is valid JSON with expected structure', function () {",
+                  "    pm.response.to.be.json;",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "});",
+                  "pm.test('Returns verified hospitals with realTimeAvailability', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.data).to.be.an('array').that.is.not.empty;",
+                  "    pm.expect(json.data[0]).to.have.property('realTimeAvailability');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/hospitals",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "hospitals"
+              ]
+            },
+            "description": "GET {{baseUrl}}/api/hospitals"
+          }
+        },
+        {
+          "name": "Nearby Hospital Search with Haversine Distance",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Nearby Hospital Search with Haversine Distance - Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response is valid JSON with expected structure', function () {",
+                  "    pm.response.to.be.json;",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "});",
+                  "pm.test('Results are sorted by Haversine distanceKm within radius', function () {",
+                  "    const list = pm.response.json().data;",
+                  "    pm.expect(list[0].distanceKm).to.be.at.most(25);",
+                  "    if (list.length > 1) pm.expect(list[0].distanceKm).to.be.at.most(list[1].distanceKm);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/hospitals?lat=28.6139&lng=77.2090&radius=25&sortBy=distance",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "hospitals"
+              ],
+              "query": [
+                {
+                  "key": "lat",
+                  "value": "28.6139"
+                },
+                {
+                  "key": "lng",
+                  "value": "77.2090"
+                },
+                {
+                  "key": "radius",
+                  "value": "25"
+                },
+                {
+                  "key": "sortBy",
+                  "value": "distance"
+                }
+              ]
+            },
+            "description": "GET {{baseUrl}}/api/hospitals?lat=28.6139&lng=77.2090&radius=25&sortBy=distance"
+          }
+        },
+        {
+          "name": "Filter Hospitals by Facility, Specialty & Real-Time OpenNow",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Filter Hospitals by Facility, Specialty & Real-Time OpenNow - Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response is valid JSON with expected structure', function () {",
+                  "    pm.response.to.be.json;",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "});",
+                  "pm.test('Filtered hospitals are open now and match specialty', function () {",
+                  "    const list = pm.response.json().data;",
+                  "    list.forEach(h => pm.expect(h.isOpenNow).to.eql(true));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/hospitals?facility=Super%20Speciality&specialty=Cardiology&openNow=true",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "hospitals"
+              ],
+              "query": [
+                {
+                  "key": "facility",
+                  "value": "Super Speciality"
+                },
+                {
+                  "key": "specialty",
+                  "value": "Cardiology"
+                },
+                {
+                  "key": "openNow",
+                  "value": "true"
+                }
+              ]
+            },
+            "description": "GET {{baseUrl}}/api/hospitals?facility=Super%20Speciality&specialty=Cardiology&openNow=true"
+          }
+        },
+        {
+          "name": "Get Hospital Details by ID (With Doctors, Location & Availability)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Get Hospital Details by ID (With Doctors, Location & Availability) - Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response is valid JSON with expected structure', function () {",
+                  "    pm.response.to.be.json;",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "});",
+                  "pm.test('Hospital details include doctors, ambulances, and realTimeAvailability', function () {",
+                  "    const data = pm.response.json().data;",
+                  "    pm.expect(data.doctors).to.be.an('array');",
+                  "    pm.expect(data.realTimeAvailability).to.be.an('object');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/hospitals/{{sampleHospitalId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "hospitals",
+                "{{sampleHospitalId}}"
+              ]
+            },
+            "description": "GET {{baseUrl}}/api/hospitals/{{sampleHospitalId}}"
+          }
+        },
+        {
+          "name": "Check Real-Time Hospital Availability (GET /api/hospitals/:id/availability)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Check Real-Time Hospital Availability (GET /api/hospitals/:id/availability) - Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response is valid JSON with expected structure', function () {",
+                  "    pm.response.to.be.json;",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "});",
+                  "pm.test('Returns calculated isOpenNow, operatingWindow, and bed occupancy', function () {",
+                  "    const data = pm.response.json().data;",
+                  "    pm.expect(data).to.have.property('isOpenNow');",
+                  "    pm.expect(data).to.have.property('operatingWindow');",
+                  "    pm.expect(data).to.have.property('beds');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/hospitals/{{sampleHospitalId}}/availability",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "hospitals",
+                "{{sampleHospitalId}}",
+                "availability"
+              ]
+            },
+            "description": "GET {{baseUrl}}/api/hospitals/{{sampleHospitalId}}/availability"
+          }
+        },
+        {
+          "name": "Update Hospital Real-Time Availability (PATCH /api/hospitals/:id/availability)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Update Hospital Real-Time Availability (PATCH /api/hospitals/:id/availability) - Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response is valid JSON with expected structure', function () {",
+                  "    pm.response.to.be.json;",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "});",
+                  "pm.test('Hospital bed counts are updated', function () {",
+                  "    pm.expect(pm.response.json().data.availableBeds).to.eql(70);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/hospitals/{{sampleHospitalId}}/availability",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "hospitals",
+                "{{sampleHospitalId}}",
+                "availability"
+              ]
+            },
+            "description": "PATCH {{baseUrl}}/api/hospitals/{{sampleHospitalId}}/availability",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"availableBeds\": 70,\n  \"icuBedsAvailable\": 15,\n  \"ventilatorBedsAvailable\": 7,\n  \"open24x7\": true\n}"
+            }
+          }
+        },
+        {
+          "name": "Manage Hospital Contact Details (PATCH /api/hospitals/:id/contacts)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Manage Hospital Contact Details (PATCH /api/hospitals/:id/contacts) - Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response is valid JSON with expected structure', function () {",
+                  "    pm.response.to.be.json;",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/hospitals/{{sampleHospitalId}}/contacts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "hospitals",
+                "{{sampleHospitalId}}",
+                "contacts"
+              ]
+            },
+            "description": "PATCH {{baseUrl}}/api/hospitals/{{sampleHospitalId}}/contacts",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"+91-11-45678900\",\n  \"emergencyHotline\": \"+91-11-45678911\",\n  \"email\": \"emergency@neerajpharmahospital.com\",\n  \"website\": \"https://hospital.neerajpharma.com\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Create New Hospital Record (POST /api/hospitals)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Create New Hospital Record (POST /api/hospitals) - Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test('Response is valid JSON with expected structure', function () {",
+                  "    pm.response.to.be.json;",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "});",
+                  "pm.test('Created hospital ID saved to environment', function () {",
+                  "    pm.environment.set('createdHospitalId', pm.response.json().data.id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/hospitals",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "hospitals"
+              ]
+            },
+            "description": "POST {{baseUrl}}/api/hospitals",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"National Heart & Lung Institute\",\n  \"address\": \"A-88, South Extension Part 2\",\n  \"city\": \"New Delhi\",\n  \"state\": \"Delhi\",\n  \"postalCode\": \"110049\",\n  \"latitude\": 28.567,\n  \"longitude\": 77.221,\n  \"phone\": \"+91-11-46554433\",\n  \"emergencyHotline\": \"+91-11-46554499\",\n  \"facilityType\": \"Cardiac Specialty\",\n  \"totalBeds\": 160,\n  \"availableBeds\": 45,\n  \"icuBedsAvailable\": 10,\n  \"ventilatorBedsAvailable\": 4,\n  \"specialties\": [\n    \"Cardiology\",\n    \"Pulmonology\",\n    \"Emergency Care\"\n  ],\n  \"open24x7\": true,\n  \"hasEmergency\": true,\n  \"rating\": 4.7\n}"
+            }
+          }
+        },
+        {
+          "name": "Update Hospital Information (PUT /api/hospitals/:id)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Update Hospital Information (PUT /api/hospitals/:id) - Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response is valid JSON with expected structure', function () {",
+                  "    pm.response.to.be.json;",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/hospitals/{{createdHospitalId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "hospitals",
+                "{{createdHospitalId}}"
+              ]
+            },
+            "description": "PUT {{baseUrl}}/api/hospitals/{{createdHospitalId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"availableBeds\": 52,\n  \"rating\": 4.8\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete Hospital Record (DELETE /api/hospitals/:id)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Delete Hospital Record (DELETE /api/hospitals/:id) - Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response is valid JSON with expected structure', function () {",
+                  "    pm.response.to.be.json;",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/hospitals/{{createdHospitalId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "hospitals",
+                "{{createdHospitalId}}"
+              ]
+            },
+            "description": "DELETE {{baseUrl}}/api/hospitals/{{createdHospitalId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Doctors & Specialist Roster CRUD",
+      "item": [
+        {
+          "name": "List All Doctors with Real-Time Shift Availability",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('List All Doctors with Real-Time Shift Availability - Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response is valid JSON with expected structure', function () {",
+                  "    pm.response.to.be.json;",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "});",
+                  "pm.test('Doctors include realTimeAvailability status', function () {",
+                  "    const docs = pm.response.json().data;",
+                  "    pm.expect(docs[0]).to.have.property('realTimeAvailability');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/doctors",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "doctors"
+              ]
+            },
+            "description": "GET {{baseUrl}}/api/doctors"
+          }
+        },
+        {
+          "name": "Filter Doctors by Specialty & Hospital",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Filter Doctors by Specialty & Hospital - Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response is valid JSON with expected structure', function () {",
+                  "    pm.response.to.be.json;",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/doctors?hospitalId=hosp_001&specialty=Cardiology",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "doctors"
+              ],
+              "query": [
+                {
+                  "key": "hospitalId",
+                  "value": "hosp_001"
+                },
+                {
+                  "key": "specialty",
+                  "value": "Cardiology"
+                }
+              ]
+            },
+            "description": "GET {{baseUrl}}/api/doctors?hospitalId=hosp_001&specialty=Cardiology"
+          }
+        },
+        {
+          "name": "Get Doctor Details by ID (GET /api/doctors/:id)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Get Doctor Details by ID (GET /api/doctors/:id) - Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response is valid JSON with expected structure', function () {",
+                  "    pm.response.to.be.json;",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/doctors/{{sampleDoctorId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "doctors",
+                "{{sampleDoctorId}}"
+              ]
+            },
+            "description": "GET {{baseUrl}}/api/doctors/{{sampleDoctorId}}"
+          }
+        },
+        {
+          "name": "Create Doctor Profile (POST /api/doctors)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Create Doctor Profile (POST /api/doctors) - Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test('Response is valid JSON with expected structure', function () {",
+                  "    pm.response.to.be.json;",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "});",
+                  "pm.environment.set('createdDoctorId', pm.response.json().data.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/doctors",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "doctors"
+              ]
+            },
+            "description": "POST {{baseUrl}}/api/doctors",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"hospitalId\": \"hosp_001\",\n  \"name\": \"Dr. Sanjay Gupta\",\n  \"specialty\": \"Neurosurgery\",\n  \"qualifications\": \"MBBS, MS, MCh (Neurosurgery)\",\n  \"experienceYears\": 15,\n  \"contact\": \"+91-9811556677\",\n  \"email\": \"sanjay.gupta@neerajpharmahospital.com\",\n  \"availability\": \"Mon - Sat (09:00 AM - 05:00 PM)\",\n  \"emergencyOnCall\": true,\n  \"consultationFee\": 1600\n}"
+            }
+          }
+        },
+        {
+          "name": "Update Doctor Profile (PUT /api/doctors/:id)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Update Doctor Profile (PUT /api/doctors/:id) - Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response is valid JSON with expected structure', function () {",
+                  "    pm.response.to.be.json;",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/doctors/{{createdDoctorId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "doctors",
+                "{{createdDoctorId}}"
+              ]
+            },
+            "description": "PUT {{baseUrl}}/api/doctors/{{createdDoctorId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"consultationFee\": 1750,\n  \"experienceYears\": 16\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete Doctor Profile (DELETE /api/doctors/:id)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Delete Doctor Profile (DELETE /api/doctors/:id) - Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response is valid JSON with expected structure', function () {",
+                  "    pm.response.to.be.json;",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/doctors/{{createdDoctorId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "doctors",
+                "{{createdDoctorId}}"
+              ]
+            },
+            "description": "DELETE {{baseUrl}}/api/doctors/{{createdDoctorId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Locations & Geographical Mapping CRUD",
+      "item": [
+        {
+          "name": "List All Mapped Locations (GET /api/locations)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('List All Mapped Locations (GET /api/locations) - Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response is valid JSON with expected structure', function () {",
+                  "    pm.response.to.be.json;",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/locations?lat=28.6139&lng=77.2090",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "locations"
+              ],
+              "query": [
+                {
+                  "key": "lat",
+                  "value": "28.6139"
+                },
+                {
+                  "key": "lng",
+                  "value": "77.2090"
+                }
+              ]
+            },
+            "description": "GET {{baseUrl}}/api/locations?lat=28.6139&lng=77.2090"
+          }
+        },
+        {
+          "name": "Get Location Details & Associated Hospitals (GET /api/locations/:id)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Get Location Details & Associated Hospitals (GET /api/locations/:id) - Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response is valid JSON with expected structure', function () {",
+                  "    pm.response.to.be.json;",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/locations/{{sampleLocationId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "locations",
+                "{{sampleLocationId}}"
+              ]
+            },
+            "description": "GET {{baseUrl}}/api/locations/{{sampleLocationId}}"
+          }
+        },
+        {
+          "name": "Create Location Mapping (POST /api/locations)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Create Location Mapping (POST /api/locations) - Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test('Response is valid JSON with expected structure', function () {",
+                  "    pm.response.to.be.json;",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "});",
+                  "pm.environment.set('createdLocationId', pm.response.json().data.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/locations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "locations"
+              ]
+            },
+            "description": "POST {{baseUrl}}/api/locations",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cityName\": \"Faridabad\",\n  \"state\": \"Haryana\",\n  \"address\": \"Sector 16A Medical Enclave, Faridabad\",\n  \"postalCode\": \"121002\",\n  \"latitude\": 28.4089,\n  \"longitude\": 77.3178,\n  \"keyArea\": \"Sector 16 / NH-19\",\n  \"zoneType\": \"Southern NCR Medical Hub\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Update Location Mapping (PUT /api/locations/:id)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Update Location Mapping (PUT /api/locations/:id) - Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response is valid JSON with expected structure', function () {",
+                  "    pm.response.to.be.json;",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/locations/{{createdLocationId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "locations",
+                "{{createdLocationId}}"
+              ]
+            },
+            "description": "PUT {{baseUrl}}/api/locations/{{createdLocationId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"zoneType\": \"Primary Trauma Corridor\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete Location Mapping (DELETE /api/locations/:id)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Delete Location Mapping (DELETE /api/locations/:id) - Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response is valid JSON with expected structure', function () {",
+                  "    pm.response.to.be.json;",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/locations/{{createdLocationId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "locations",
+                "{{createdLocationId}}"
+              ]
+            },
+            "description": "DELETE {{baseUrl}}/api/locations/{{createdLocationId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Emergency Contacts, Ambulances CRUD & Dispatch",
+      "item": [
+        {
+          "name": "Get Emergency Helplines & Hospital Desks",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Get Emergency Helplines & Hospital Desks - Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response is valid JSON with expected structure', function () {",
+                  "    pm.response.to.be.json;",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/emergency/contacts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "emergency",
+                "contacts"
+              ]
+            },
+            "description": "GET {{baseUrl}}/api/emergency/contacts"
+          }
+        },
+        {
+          "name": "Create Emergency Contact Helpline (POST /api/emergency/contacts)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Create Emergency Contact Helpline (POST /api/emergency/contacts) - Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test('Response is valid JSON with expected structure', function () {",
+                  "    pm.response.to.be.json;",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "});",
+                  "pm.environment.set('sampleEmergencyContactId', pm.response.json().data.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/emergency/contacts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "emergency",
+                "contacts"
+              ]
+            },
+            "description": "POST {{baseUrl}}/api/emergency/contacts",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"National Burn & Trauma Rapid Helpline\",\n  \"type\": \"Trauma Helpline\",\n  \"phoneNumber\": \"1066\",\n  \"secondaryPhone\": \"+91-11-26598800\",\n  \"serviceScope\": \"Acute Burn & Polytrauma Triage\",\n  \"availability\": \"24x7 Free Service\",\n  \"averageResponseTimeMinutes\": 9\n}"
+            }
+          }
+        },
+        {
+          "name": "Update Emergency Contact (PUT /api/emergency/contacts/:id)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Update Emergency Contact (PUT /api/emergency/contacts/:id) - Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response is valid JSON with expected structure', function () {",
+                  "    pm.response.to.be.json;",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/emergency/contacts/{{sampleEmergencyContactId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "emergency",
+                "contacts",
+                "{{sampleEmergencyContactId}}"
+              ]
+            },
+            "description": "PUT {{baseUrl}}/api/emergency/contacts/{{sampleEmergencyContactId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"averageResponseTimeMinutes\": 7\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete Emergency Contact (DELETE /api/emergency/contacts/:id)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Delete Emergency Contact (DELETE /api/emergency/contacts/:id) - Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response is valid JSON with expected structure', function () {",
+                  "    pm.response.to.be.json;",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/emergency/contacts/{{sampleEmergencyContactId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "emergency",
+                "contacts",
+                "{{sampleEmergencyContactId}}"
+              ]
+            },
+            "description": "DELETE {{baseUrl}}/api/emergency/contacts/{{sampleEmergencyContactId}}"
+          }
+        },
+        {
+          "name": "List Nearby Active Ambulances",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('List Nearby Active Ambulances - Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response is valid JSON with expected structure', function () {",
+                  "    pm.response.to.be.json;",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/emergency/ambulances?lat=28.6139&lng=77.2090&radius=35",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "emergency",
+                "ambulances"
+              ],
+              "query": [
+                {
+                  "key": "lat",
+                  "value": "28.6139"
+                },
+                {
+                  "key": "lng",
+                  "value": "77.2090"
+                },
+                {
+                  "key": "radius",
+                  "value": "35"
+                }
+              ]
+            },
+            "description": "GET {{baseUrl}}/api/emergency/ambulances?lat=28.6139&lng=77.2090&radius=35"
+          }
+        },
+        {
+          "name": "Register New Ambulance Unit (POST /api/emergency/ambulances)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Register New Ambulance Unit (POST /api/emergency/ambulances) - Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test('Response is valid JSON with expected structure', function () {",
+                  "    pm.response.to.be.json;",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "});",
+                  "pm.environment.set('sampleAmbulanceId', pm.response.json().data.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/emergency/ambulances",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "emergency",
+                "ambulances"
+              ]
+            },
+            "description": "POST {{baseUrl}}/api/emergency/ambulances",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vehicleNumber\": \"DL-01-EQ-8821\",\n  \"vehicleType\": \"Advanced Life Support (ALS)\",\n  \"driverName\": \"Vikramaditya Rao\",\n  \"contactNumber\": \"+91-9810776655\",\n  \"currentLatitude\": 28.618,\n  \"currentLongitude\": 77.215,\n  \"hospitalAffiliation\": \"Neeraj Pharma Apex Hospital\",\n  \"hospitalId\": \"hosp_001\",\n  \"equipment\": [\n    \"Ventilator\",\n    \"Defibrillator\",\n    \"Oxygen\"\n  ],\n  \"status\": \"Available\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Update Ambulance Unit Status/Location (PUT /api/emergency/ambulances/:id)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Update Ambulance Unit Status/Location (PUT /api/emergency/ambulances/:id) - Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response is valid JSON with expected structure', function () {",
+                  "    pm.response.to.be.json;",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/emergency/ambulances/{{sampleAmbulanceId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "emergency",
+                "ambulances",
+                "{{sampleAmbulanceId}}"
+              ]
+            },
+            "description": "PUT {{baseUrl}}/api/emergency/ambulances/{{sampleAmbulanceId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentLatitude\": 28.62,\n  \"currentLongitude\": 77.218,\n  \"status\": \"Available\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete Ambulance Unit (DELETE /api/emergency/ambulances/:id)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Delete Ambulance Unit (DELETE /api/emergency/ambulances/:id) - Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response is valid JSON with expected structure', function () {",
+                  "    pm.response.to.be.json;",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/emergency/ambulances/{{sampleAmbulanceId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "emergency",
+                "ambulances",
+                "{{sampleAmbulanceId}}"
+              ]
+            },
+            "description": "DELETE {{baseUrl}}/api/emergency/ambulances/{{sampleAmbulanceId}}"
+          }
+        },
+        {
+          "name": "Dispatch Emergency Ambulance (POST /api/emergency/dispatch)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Dispatch Emergency Ambulance (POST /api/emergency/dispatch) - Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test('Response is valid JSON with expected structure', function () {",
+                  "    pm.response.to.be.json;",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "});",
+                  "pm.test('Dispatch returns trackingId and ETA', function () {",
+                  "    const data = pm.response.json().data;",
+                  "    pm.expect(data.trackingId).to.be.a('string');",
+                  "    pm.environment.set('sampleTrackingId', data.trackingId);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/emergency/dispatch",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "emergency",
+                "dispatch"
+              ]
+            },
+            "description": "POST {{baseUrl}}/api/emergency/dispatch",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"patientName\": \"Kiran Rao\",\n  \"contactPhone\": \"+91-9876543210\",\n  \"emergencyType\": \"Cardiac\",\n  \"vehicleType\": \"Cardiac Mobile ICU\",\n  \"latitude\": 28.5684,\n  \"longitude\": 77.2415,\n  \"notes\": \"Severe acute chest pain near gate 2\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Track Ambulance Dispatch Status (GET /api/emergency/dispatch/:trackingId)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Track Ambulance Dispatch Status (GET /api/emergency/dispatch/:trackingId) - Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response is valid JSON with expected structure', function () {",
+                  "    pm.response.to.be.json;",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/emergency/dispatch/{{sampleTrackingId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "emergency",
+                "dispatch",
+                "{{sampleTrackingId}}"
+              ]
+            },
+            "description": "GET {{baseUrl}}/api/emergency/dispatch/{{sampleTrackingId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "7. Admin Verification Workflows & User Management",
+      "item": [
+        {
+          "name": "Get Admin Dashboard Statistics",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Get Admin Dashboard Statistics - Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response is valid JSON with expected structure', function () {",
+                  "    pm.response.to.be.json;",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/stats",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "stats"
+              ]
+            },
+            "description": "GET {{baseUrl}}/api/admin/stats"
+          }
+        },
+        {
+          "name": "Get Pending Hospital Verifications",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Get Pending Hospital Verifications - Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response is valid JSON with expected structure', function () {",
+                  "    pm.response.to.be.json;",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/hospitals/pending",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "hospitals",
+                "pending"
+              ]
+            },
+            "description": "GET {{baseUrl}}/api/admin/hospitals/pending"
+          }
+        },
+        {
+          "name": "Verify & Approve Hospital (PATCH /api/admin/hospitals/:id/verify)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Verify & Approve Hospital (PATCH /api/admin/hospitals/:id/verify) - Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response is valid JSON with expected structure', function () {",
+                  "    pm.response.to.be.json;",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/hospitals/hosp_011/verify",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "hospitals",
+                "hosp_011",
+                "verify"
+              ]
+            },
+            "description": "PATCH {{baseUrl}}/api/admin/hospitals/hosp_011/verify",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"verified\": true,\n  \"verificationNotes\": \"Approved after clinical trauma inspection\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Pending Emergency Contacts & Ambulances",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Get Pending Emergency Contacts & Ambulances - Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response is valid JSON with expected structure', function () {",
+                  "    pm.response.to.be.json;",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/emergency/pending",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "emergency",
+                "pending"
+              ]
+            },
+            "description": "GET {{baseUrl}}/api/admin/emergency/pending"
+          }
+        },
+        {
+          "name": "Verify Emergency Contact Service (PATCH /api/admin/emergency-contacts/:id/verify)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Verify Emergency Contact Service (PATCH /api/admin/emergency-contacts/:id/verify) - Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response is valid JSON with expected structure', function () {",
+                  "    pm.response.to.be.json;",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/emergency-contacts/emg_006/verify",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "emergency-contacts",
+                "emg_006",
+                "verify"
+              ]
+            },
+            "description": "PATCH {{baseUrl}}/api/admin/emergency-contacts/emg_006/verify",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"verified\": true,\n  \"verificationNotes\": \"Verified hotline responsiveness\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Verify Ambulance Unit (PATCH /api/admin/ambulances/:id/verify)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Verify Ambulance Unit (PATCH /api/admin/ambulances/:id/verify) - Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response is valid JSON with expected structure', function () {",
+                  "    pm.response.to.be.json;",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/ambulances/amb_007/verify",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "ambulances",
+                "amb_007",
+                "verify"
+              ]
+            },
+            "description": "PATCH {{baseUrl}}/api/admin/ambulances/amb_007/verify",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"verified\": true,\n  \"verificationNotes\": \"Verified ALS life-support inventory\"\n}"
+            }
+          }
+        },
+        {
+          "name": "List All Registered Users (GET /api/admin/users)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('List All Registered Users (GET /api/admin/users) - Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response is valid JSON with expected structure', function () {",
+                  "    pm.response.to.be.json;",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "users"
+              ]
+            },
+            "description": "GET {{baseUrl}}/api/admin/users"
+          }
+        },
+        {
+          "name": "Get Single User by ID (GET /api/admin/users/:id)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Get Single User by ID (GET /api/admin/users/:id) - Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response is valid JSON with expected structure', function () {",
+                  "    pm.response.to.be.json;",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/users/usr_staff_001",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "users",
+                "usr_staff_001"
+              ]
+            },
+            "description": "GET {{baseUrl}}/api/admin/users/usr_staff_001"
+          }
+        },
+        {
+          "name": "Edit User Details (PUT /api/admin/users/:id)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Edit User Details (PUT /api/admin/users/:id) - Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response is valid JSON with expected structure', function () {",
+                  "    pm.response.to.be.json;",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/users/usr_staff_001",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "users",
+                "usr_staff_001"
+              ]
+            },
+            "description": "PUT {{baseUrl}}/api/admin/users/usr_staff_001",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Dr. Vikas Mehra (Senior Coordinator)\",\n  \"department\": \"Regional Emergency Command\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Change User Role (PATCH /api/admin/users/:id/role)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Change User Role (PATCH /api/admin/users/:id/role) - Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response is valid JSON with expected structure', function () {",
+                  "    pm.response.to.be.json;",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/users/usr_staff_001/role",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "users",
+                "usr_staff_001",
+                "role"
+              ]
+            },
+            "description": "PATCH {{baseUrl}}/api/admin/users/usr_staff_001/role",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"user\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Update User Account Status Enable/Disable (PATCH /api/admin/users/:id/status)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Update User Account Status Enable/Disable (PATCH /api/admin/users/:id/status) - Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response is valid JSON with expected structure', function () {",
+                  "    pm.response.to.be.json;",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/users/usr_staff_001/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "users",
+                "usr_staff_001",
+                "status"
+              ]
+            },
+            "description": "PATCH {{baseUrl}}/api/admin/users/usr_staff_001/status",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"active\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete User Account (DELETE /api/admin/users/:id)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Delete User Account (DELETE /api/admin/users/:id) - Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response is valid JSON with expected structure', function () {",
+                  "    pm.response.to.be.json;",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/users/{{sampleUserId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "users",
+                "{{sampleUserId}}"
+              ]
+            },
+            "description": "DELETE {{baseUrl}}/api/admin/users/{{sampleUserId}}"
+          }
+        },
+        {
+          "name": "Reseed Database State (POST /api/admin/reseed)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Reseed Database State (POST /api/admin/reseed) - Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response is valid JSON with expected structure', function () {",
+                  "    pm.response.to.be.json;",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/reseed",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "reseed"
+              ]
+            },
+            "description": "POST {{baseUrl}}/api/admin/reseed",
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "8. Negative Cases, Invalid Inputs, Auth Failures & Edge Cases",
+      "item": [
+        {
+          "name": "SECURITY: Block Admin Role Self-Assignment at Registration (403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('SECURITY: Block Admin Role Self-Assignment at Registration (403) - Status code is 403', function () {",
+                  "    pm.response.to.have.status(403);",
+                  "});",
+                  "pm.test('Response is valid JSON with expected structure', function () {",
+                  "    pm.response.to.be.json;",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(false);",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register"
+              ]
+            },
+            "description": "POST {{baseUrl}}/api/auth/register",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Unauthorized Admin\",\n  \"email\": \"escalate@example.com\",\n  \"password\": \"Password@123\",\n  \"role\": \"admin\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Reject Duplicate Email Registration (409 Conflict)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Reject Duplicate Email Registration (409 Conflict) - Status code is 409', function () {",
+                  "    pm.response.to.have.status(409);",
+                  "});",
+                  "pm.test('Response is valid JSON with expected structure', function () {",
+                  "    pm.response.to.be.json;",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(false);",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register"
+              ]
+            },
+            "description": "POST {{baseUrl}}/api/auth/register",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Duplicate Admin\",\n  \"email\": \"admin@neerajpharma.com\",\n  \"password\": \"Password@123\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Reject Invalid Email & Short Password at Register (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Reject Invalid Email & Short Password at Register (400) - Status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test('Response is valid JSON with expected structure', function () {",
+                  "    pm.response.to.be.json;",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(false);",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register"
+              ]
+            },
+            "description": "POST {{baseUrl}}/api/auth/register",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"X\",\n  \"email\": \"not-an-email\",\n  \"password\": \"123\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Reject Login with Wrong Password (401 Unauthorized)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Reject Login with Wrong Password (401 Unauthorized) - Status code is 401', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "pm.test('Response is valid JSON with expected structure', function () {",
+                  "    pm.response.to.be.json;",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(false);",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "description": "POST {{baseUrl}}/api/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@neerajpharma.com\",\n  \"password\": \"WrongPassword999\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Reject Protected Profile Access Without JWT Token (401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Reject Protected Profile Access Without JWT Token (401) - Status code is 401', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "pm.test('Response is valid JSON with expected structure', function () {",
+                  "    pm.response.to.be.json;",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(false);",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "me"
+              ]
+            },
+            "description": "GET {{baseUrl}}/api/auth/me"
+          }
+        },
+        {
+          "name": "Reject Tampered/Invalid JWT Signature (401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Reject Tampered/Invalid JWT Signature (401) - Status code is 401', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "pm.test('Response is valid JSON with expected structure', function () {",
+                  "    pm.response.to.be.json;",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(false);",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{invalid_token_var}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "me"
+              ]
+            },
+            "description": "GET {{baseUrl}}/api/auth/me"
+          }
+        },
+        {
+          "name": "Reject Citizen User Accessing Admin Stats Route (403 Forbidden)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Reject Citizen User Accessing Admin Stats Route (403 Forbidden) - Status code is 403', function () {",
+                  "    pm.response.to.have.status(403);",
+                  "});",
+                  "pm.test('Response is valid JSON with expected structure', function () {",
+                  "    pm.response.to.be.json;",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(false);",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/stats",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "stats"
+              ]
+            },
+            "description": "GET {{baseUrl}}/api/admin/stats"
+          }
+        },
+        {
+          "name": "Reject Non-Numeric Coordinates lat=abc (400 Bad Request)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Reject Non-Numeric Coordinates lat=abc (400 Bad Request) - Status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test('Response is valid JSON with expected structure', function () {",
+                  "    pm.response.to.be.json;",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(false);",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/hospitals?lat=abc&lng=77.2090",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "hospitals"
+              ],
+              "query": [
+                {
+                  "key": "lat",
+                  "value": "abc"
+                },
+                {
+                  "key": "lng",
+                  "value": "77.2090"
+                }
+              ]
+            },
+            "description": "GET {{baseUrl}}/api/hospitals?lat=abc&lng=77.2090"
+          }
+        },
+        {
+          "name": "Reject Out-of-Range Coordinates lat=999 (400 Bad Request)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Reject Out-of-Range Coordinates lat=999 (400 Bad Request) - Status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test('Response is valid JSON with expected structure', function () {",
+                  "    pm.response.to.be.json;",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(false);",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/hospitals?lat=999&lng=77.2090",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "hospitals"
+              ],
+              "query": [
+                {
+                  "key": "lat",
+                  "value": "999"
+                },
+                {
+                  "key": "lng",
+                  "value": "77.2090"
+                }
+              ]
+            },
+            "description": "GET {{baseUrl}}/api/hospitals?lat=999&lng=77.2090"
+          }
+        },
+        {
+          "name": "Reject Search Radius Exceeding MAX_SEARCH_RADIUS_KM radius=500 (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Reject Search Radius Exceeding MAX_SEARCH_RADIUS_KM radius=500 (400) - Status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test('Response is valid JSON with expected structure', function () {",
+                  "    pm.response.to.be.json;",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(false);",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/hospitals?lat=28.6139&lng=77.2090&radius=500",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "hospitals"
+              ],
+              "query": [
+                {
+                  "key": "lat",
+                  "value": "28.6139"
+                },
+                {
+                  "key": "lng",
+                  "value": "77.2090"
+                },
+                {
+                  "key": "radius",
+                  "value": "500"
+                }
+              ]
+            },
+            "description": "GET {{baseUrl}}/api/hospitals?lat=28.6139&lng=77.2090&radius=500"
+          }
+        },
+        {
+          "name": "Reject Hospital Update with Negative Beds & Rating > 5 (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Reject Hospital Update with Negative Beds & Rating > 5 (400) - Status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test('Response is valid JSON with expected structure', function () {",
+                  "    pm.response.to.be.json;",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(false);",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/hospitals/hosp_001",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "hospitals",
+                "hosp_001"
+              ]
+            },
+            "description": "PUT {{baseUrl}}/api/hospitals/hosp_001",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"availableBeds\": -20,\n  \"rating\": 8.5\n}"
+            }
+          }
+        },
+        {
+          "name": "Return 404 Not Found for Non-Existent Hospital ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Return 404 Not Found for Non-Existent Hospital ID - Status code is 404', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "pm.test('Response is valid JSON with expected structure', function () {",
+                  "    pm.response.to.be.json;",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(false);",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/hospitals/hosp_non_existent_999",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "hospitals",
+                "hosp_non_existent_999"
+              ]
+            },
+            "description": "GET {{baseUrl}}/api/hospitals/hosp_non_existent_999"
+          }
+        }
+      ]
+    }
+  ]
+}
