@@ -29,16 +29,164 @@ class DatabaseEngine {
       emergency_dispatches: DispatchModel
     };
     this.data = null;
+    this.isExternal = false;
     this.ensureInitialized();
   }
 
   async connectExternal() {
-    if (this.dialect === 'postgresql') {
-      await initPostgresSchema();
-    } else {
-      await connectMongoDB();
+    if (this.dialect === 'postgresql' || this.dialect === 'postgres') {
+      try {
+        await initPostgresSchema();
+        this.isExternal = true;
+        const res = await pool.query('SELECT COUNT(*) FROM hospitals');
+        const count = parseInt(res.rows[0].count, 10);
+        if (count === 0) {
+          await this.seedPostgres();
+        }
+        await this.hydrateFromPostgres();
+        console.log(`[DatabaseEngine] Connected to PostgreSQL. Hydrated ${this.count('hospitals')} hospitals.`);
+        return true;
+      } catch (err) {
+        console.warn(`[DatabaseEngine] PostgreSQL connection failed: ${err.message}. Falling back to embedded JSON store.`);
+        this.isExternal = false;
+        return false;
+      }
+    } else if (this.dialect === 'mongodb') {
+      try {
+        await connectMongoDB();
+        this.isExternal = true;
+        const count = await this.models.hospitals.countDocuments();
+        if (count === 0) {
+          await this.seedMongoDB();
+        }
+        await this.hydrateFromMongoDB();
+        console.log(`[DatabaseEngine] Connected to MongoDB. Hydrated ${this.count('hospitals')} hospitals.`);
+        return true;
+      } catch (err) {
+        console.warn(`[DatabaseEngine] MongoDB connection failed: ${err.message}. Falling back to embedded JSON store.`);
+        this.isExternal = false;
+        return false;
+      }
     }
-    return true;
+    return false;
+  }
+
+  async seedMongoDB() {
+    const seed = getSeedData();
+    for (const [key, model] of Object.entries(this.models)) {
+      if (seed[key] && seed[key].length > 0) {
+        await model.deleteMany({});
+        await model.insertMany(seed[key]);
+      }
+    }
+  }
+
+  async hydrateFromMongoDB() {
+    for (const [key, model] of Object.entries(this.models)) {
+      const records = await model.find().lean();
+      if (records && records.length > 0) {
+        this.data[key] = records.map(r => {
+          const doc = { ...r };
+          delete doc._id;
+          delete doc.__v;
+          return doc;
+        });
+      }
+    }
+    this.persistSync();
+  }
+
+  async seedPostgres() {
+    const seed = getSeedData();
+    // Seed locations
+    for (const loc of seed.locations || []) {
+      await pool.query(
+        `INSERT INTO locations (id, city_name, state, address, postal_code, latitude, longitude, key_area, zone_type, hospital_count, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+         ON CONFLICT (id) DO NOTHING`,
+        [loc.id, loc.cityName, loc.state, loc.address, loc.postalCode, loc.latitude, loc.longitude, loc.keyArea, loc.zoneType, loc.hospitalCount, loc.createdAt || new Date()]
+      );
+    }
+    // Seed hospitals
+    for (const h of seed.hospitals || []) {
+      await pool.query(
+        `INSERT INTO hospitals (id, location_id, name, address, city, state, postal_code, latitude, longitude, phone, emergency_hotline, email, facility_type, operating_hours, open_time, close_time, open_24x7, has_emergency, total_beds, available_beds, icu_beds_available, ventilator_beds_available, specialties, services, rating, verified, verified_at, verified_by, verification_notes, website, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31)
+         ON CONFLICT (id) DO NOTHING`,
+        [
+          h.id, h.locationId, h.name, h.address, h.city, h.state, h.postalCode, h.latitude, h.longitude,
+          h.phone, h.emergencyHotline, h.email, h.facilityType, h.operatingHours,
+          h.operatingSchedule ? h.operatingSchedule.openTime : '00:00',
+          h.operatingSchedule ? h.operatingSchedule.closeTime : '23:59',
+          h.open24x7, h.hasEmergency, h.totalBeds, h.availableBeds, h.icuBedsAvailable, h.ventilatorBedsAvailable,
+          JSON.stringify(h.specialties || []), JSON.stringify(h.services || []), h.rating,
+          h.verified, h.verifiedAt, h.verifiedBy, h.verificationNotes, h.website, h.createdAt || new Date()
+        ]
+      );
+    }
+  }
+
+  async hydrateFromPostgres() {
+    try {
+      const locRes = await pool.query('SELECT * FROM locations');
+      if (locRes.rows.length > 0) {
+        this.data.locations = locRes.rows.map(r => ({
+          id: r.id,
+          cityName: r.city_name,
+          state: r.state,
+          address: r.address,
+          postalCode: r.postal_code,
+          latitude: parseFloat(r.latitude),
+          longitude: parseFloat(r.longitude),
+          keyArea: r.key_area,
+          zoneType: r.zone_type,
+          hospitalCount: r.hospital_count,
+          createdAt: r.created_at
+        }));
+      }
+      const hospRes = await pool.query('SELECT * FROM hospitals');
+      if (hospRes.rows.length > 0) {
+        this.data.hospitals = hospRes.rows.map(r => ({
+          id: r.id,
+          locationId: r.location_id,
+          name: r.name,
+          address: r.address,
+          city: r.city,
+          state: r.state,
+          postalCode: r.postal_code,
+          latitude: parseFloat(r.latitude),
+          longitude: parseFloat(r.longitude),
+          phone: r.phone,
+          emergencyHotline: r.emergency_hotline,
+          email: r.email,
+          facilityType: r.facility_type,
+          operatingHours: r.operating_hours,
+          operatingSchedule: {
+            openTime: r.open_time || '00:00',
+            closeTime: r.close_time || '23:59',
+            days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+          },
+          open24x7: r.open_24x7,
+          hasEmergency: r.has_emergency,
+          totalBeds: r.total_beds,
+          availableBeds: r.available_beds,
+          icuBedsAvailable: r.icu_beds_available,
+          ventilatorBedsAvailable: r.ventilator_beds_available,
+          specialties: typeof r.specialties === 'string' ? JSON.parse(r.specialties) : r.specialties,
+          services: typeof r.services === 'string' ? JSON.parse(r.services) : r.services,
+          rating: parseFloat(r.rating),
+          verified: r.verified,
+          verifiedAt: r.verified_at,
+          verifiedBy: r.verified_by,
+          verificationNotes: r.verification_notes,
+          website: r.website,
+          createdAt: r.created_at
+        }));
+      }
+      this.persistSync();
+    } catch (err) {
+      console.warn(`[DatabaseEngine] Error hydrating from PostgreSQL: ${err.message}`);
+    }
   }
 
   ensureInitialized() {
@@ -65,6 +213,13 @@ class DatabaseEngine {
   seedDatabase() {
     this.data = getSeedData();
     this.persistSync();
+    if (this.isExternal) {
+      if (this.dialect === 'mongodb') {
+        this.seedMongoDB().catch(err => console.error('[DatabaseEngine] Mongo reseed error:', err.message));
+      } else if (this.dialect === 'postgresql' || this.dialect === 'postgres') {
+        this.seedPostgres().catch(err => console.error('[DatabaseEngine] Postgres reseed error:', err.message));
+      }
+    }
     return this.data;
   }
 
@@ -111,6 +266,15 @@ class DatabaseEngine {
     };
     col.push(newItem);
     this.persistSync();
+
+    if (this.isExternal && this.models[collectionName]) {
+      if (this.dialect === 'mongodb') {
+        this.models[collectionName].create(newItem).catch(err => {
+          console.error(`[DatabaseEngine] Mongo insert error on ${collectionName}:`, err.message);
+        });
+      }
+    }
+
     return newItem;
   }
 
@@ -126,6 +290,15 @@ class DatabaseEngine {
       updatedAt: new Date().toISOString()
     };
     this.persistSync();
+
+    if (this.isExternal && this.models[collectionName]) {
+      if (this.dialect === 'mongodb') {
+        this.models[collectionName].findOneAndUpdate({ id }, { $set: updates }).catch(err => {
+          console.error(`[DatabaseEngine] Mongo update error on ${collectionName}:`, err.message);
+        });
+      }
+    }
+
     return col[index];
   }
 
@@ -136,6 +309,15 @@ class DatabaseEngine {
 
     col.splice(index, 1);
     this.persistSync();
+
+    if (this.isExternal && this.models[collectionName]) {
+      if (this.dialect === 'mongodb') {
+        this.models[collectionName].deleteOne({ id }).catch(err => {
+          console.error(`[DatabaseEngine] Mongo delete error on ${collectionName}:`, err.message);
+        });
+      }
+    }
+
     return true;
   }
 

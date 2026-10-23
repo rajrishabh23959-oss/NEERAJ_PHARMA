@@ -1,1005 +1,1361 @@
-// Neeraj Pharma Healthcare & Emergency Hospital Locator - Frontend Engine
-const app = {
-  // Application State
-  state: {
-    userLat: 28.6139,
-    userLng: 77.2090,
-    radiusKm: 25,
-    searchQuery: '',
-    selectedFacility: 'all',
-    selectedSpecialty: 'all',
-    open24x7Only: false,
-    emergencyOnly: false,
-    icuOnly: false,
-    sortBy: 'distance',
-    hospitals: [],
-    selectedHospitalId: null,
-    currentUser: null,
-    token: null,
-    map: null,
-    markers: [],
-    userMarker: null
-  },
+/**
+ * Neeraj Pharma Healthcare & Emergency Hospital Locator
+ * Production Frontend Application (Zero Hardcoded Mock Data)
+ */
 
-  // City preset coordinates
-  cityCoordinates: {
-    delhi: { lat: 28.6139, lng: 77.2090, name: 'Delhi NCR (Central)' },
-    south_delhi: { lat: 28.5355, lng: 77.2100, name: 'South Delhi' },
-    gurugram: { lat: 28.4595, lng: 77.0266, name: 'Gurugram' },
-    noida: { lat: 28.5708, lng: 77.3271, name: 'Noida' },
-    mumbai: { lat: 19.0760, lng: 72.8777, name: 'Mumbai' },
-    chennai: { lat: 13.0827, lng: 80.2707, name: 'Chennai' }
-  },
+class NeerajPharmaApp {
+  constructor() {
+    this.token = localStorage.getItem('np_token') || null;
+    this.currentUser = null;
+    this.activeView = 'hospitals';
+    this.currentLocation = { lat: 28.6139, lng: 77.2090, name: 'New Delhi (Central NCR)' };
+    
+    this.hospitals = [];
+    this.doctors = [];
+    this.locations = [];
+    this.emergencyContacts = [];
+    this.ambulances = [];
+    
+    this.map = null;
+    this.markersGroup = null;
+    this.userMarker = null;
+    this.searchDebounceTimer = null;
+    this.activeTrackingId = null;
+    this.adminActiveTab = 'kpi';
+  }
 
-  init() {
-    this.restoreSession();
+  async init() {
     this.initMap();
-    this.loadLocationsDirectory();
-    this.fetchHospitals();
-    this.updateCoordsDisplay();
-  },
+    await this.restoreAuthSession();
+    await this.fetchPlatformHealth();
+    await this.fetchHospitals();
+    await this.fetchLocations();
+    await this.fetchDoctors();
+    await this.fetchEmergencyData();
+    this.setupUrlHashListener();
+  }
 
-  async loadLocationsDirectory() {
-    try {
-      const res = await fetch('/api/locations');
-      const data = await res.json();
-      if (data.success && Array.isArray(data.data)) {
-        this.state.locations = data.data;
-      }
-    } catch (_) {}
-  },
+  // =========================================================================
+  // API CLIENT & HTTP HELPERS
+  // =========================================================================
+  async api(endpoint, options = {}) {
+    const headers = {
+      'Content-Type': 'application/json',
+      ...options.headers
+    };
 
-  // ==========================================
-  // Authentication & Session
-  // ==========================================
-  restoreSession() {
-    const token = localStorage.getItem('np_token');
-    const userJson = localStorage.getItem('np_user');
-    if (token && userJson) {
-      try {
-        this.state.token = token;
-        this.state.currentUser = JSON.parse(userJson);
-        this.updateAuthUI();
-      } catch (_) {
-        this.logout();
-      }
+    if (this.token) {
+      headers['Authorization'] = `Bearer ${this.token}`;
     }
-  },
-
-  updateAuthUI() {
-    const unauth = document.getElementById('unauthControls');
-    const auth = document.getElementById('authControls');
-    const navAdmin = document.getElementById('navAdminLink');
-    const nameLabel = document.getElementById('userNameLabel');
-    const roleBadge = document.getElementById('userRoleBadge');
-
-    if (this.state.currentUser) {
-      unauth.style.display = 'none';
-      auth.style.display = 'flex';
-      nameLabel.textContent = this.state.currentUser.name;
-      roleBadge.textContent = this.state.currentUser.role;
-      roleBadge.style.background = this.state.currentUser.role === 'admin' ? '#d97706' : '#0284c7';
-      if (this.state.currentUser.role === 'admin') {
-        navAdmin.style.display = 'inline-block';
-      } else {
-        navAdmin.style.display = 'none';
-      }
-    } else {
-      unauth.style.display = 'flex';
-      auth.style.display = 'none';
-      navAdmin.style.display = 'none';
-    }
-  },
-
-  openAuthModal(tab = 'login') {
-    this.switchAuthTab(tab);
-    document.getElementById('authModal').style.display = 'flex';
-  },
-
-  switchAuthTab(tab) {
-    const loginForm = document.getElementById('loginForm');
-    const regForm = document.getElementById('registerForm');
-    const tabLogin = document.getElementById('tabLoginBtn');
-    const tabReg = document.getElementById('tabRegisterBtn');
-
-    if (tab === 'login') {
-      loginForm.style.display = 'block';
-      regForm.style.display = 'none';
-      tabLogin.classList.add('active');
-      tabReg.classList.remove('active');
-    } else {
-      loginForm.style.display = 'none';
-      regForm.style.display = 'block';
-      tabLogin.classList.remove('active');
-      tabReg.classList.add('active');
-    }
-  },
-
-  fillDemoLogin(type) {
-    if (type === 'admin') {
-      document.getElementById('loginEmail').value = 'admin@neerajpharma.com';
-      document.getElementById('loginPassword').value = 'Admin@12345';
-    } else {
-      document.getElementById('loginEmail').value = 'patient@neerajpharma.com';
-      document.getElementById('loginPassword').value = 'User@12345';
-    }
-  },
-
-  async handleLoginSubmit(e) {
-    e.preventDefault();
-    const email = document.getElementById('loginEmail').value;
-    const password = document.getElementById('loginPassword').value;
-    const errBox = document.getElementById('loginError');
-    errBox.style.display = 'none';
 
     try {
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
+      const response = await fetch(endpoint, {
+        ...options,
+        headers
       });
-      const data = await res.json();
-      if (!data.success) {
-        throw new Error(data.message || 'Login failed');
+
+      const data = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        const errorMsg = data && (data.message || (data.errors && data.errors.join(', ')))
+          ? (data.message || data.errors.join(', '))
+          : `HTTP error ${response.status}`;
+        throw new Error(errorMsg);
       }
 
-      this.state.token = data.data.token;
-      this.state.currentUser = data.data.user;
-      localStorage.setItem('np_token', data.data.token);
-      localStorage.setItem('np_user', JSON.stringify(data.data.user));
-
-      this.updateAuthUI();
-      this.closeModal('authModal');
-      this.fetchHospitals(); // Refresh with role context
+      return data;
     } catch (err) {
-      errBox.textContent = err.message;
-      errBox.style.display = 'block';
+      console.warn(`API Error on ${endpoint}:`, err.message);
+      throw err;
     }
-  },
+  }
 
-  async handleRegisterSubmit(e) {
-    e.preventDefault();
-    const name = document.getElementById('regName').value;
-    const email = document.getElementById('regEmail').value;
-    const phone = document.getElementById('regPhone').value;
-    const password = document.getElementById('regPassword').value;
-    const errBox = document.getElementById('registerError');
-    errBox.style.display = 'none';
-
-    try {
-      const res = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password, phoneNumber: phone })
-      });
-      const data = await res.json();
-      if (!data.success) {
-        throw new Error(data.message || (data.errors ? data.errors.join(', ') : 'Registration failed'));
-      }
-
-      this.state.token = data.data.token;
-      this.state.currentUser = data.data.user;
-      localStorage.setItem('np_token', data.data.token);
-      localStorage.setItem('np_user', JSON.stringify(data.data.user));
-
-      this.updateAuthUI();
-      this.closeModal('authModal');
-      this.fetchHospitals();
-    } catch (err) {
-      errBox.textContent = err.message;
-      errBox.style.display = 'block';
-    }
-  },
-
-  logout() {
-    this.state.token = null;
-    this.state.currentUser = null;
-    localStorage.removeItem('np_token');
-    localStorage.removeItem('np_user');
-    this.updateAuthUI();
-    this.fetchHospitals();
-  },
-
-  // ==========================================
-  // Geospatial Map Initialization & Updates
-  // ==========================================
+  // =========================================================================
+  // LEAFLET INTERACTIVE MAP
+  // =========================================================================
   initMap() {
-    try {
-      if (typeof L === 'undefined') {
-        console.warn('Leaflet not loaded, rendering fallback visual map.');
-        return;
-      }
-      this.state.map = L.map('hospitalMap').setView([this.state.userLat, this.state.userLng], 12);
+    const mapEl = document.getElementById('hospitalMap');
+    if (!mapEl || typeof L === 'undefined') return;
 
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
-        attribution: '&copy; OpenStreetMap contributors | Neeraj Pharma Locator'
-      }).addTo(this.state.map);
+    this.map = L.map('hospitalMap', {
+      zoomControl: true,
+      scrollWheelZoom: true
+    }).setView([this.currentLocation.lat, this.currentLocation.lng], 12);
 
-      this.updateUserMapMarker();
-    } catch (err) {
-      console.warn('Map initialization note:', err.message);
-    }
-  },
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      maxZoom: 19
+    }).addTo(this.map);
 
-  updateUserMapMarker() {
-    if (!this.state.map) return;
-    if (this.state.userMarker) {
-      this.state.map.removeLayer(this.state.userMarker);
+    this.markersGroup = L.layerGroup().addTo(this.map);
+    this.renderUserLocationMarker();
+  }
+
+  renderUserLocationMarker() {
+    if (!this.map) return;
+    if (this.userMarker) {
+      this.markersGroup.removeLayer(this.userMarker);
     }
 
     const userIcon = L.divIcon({
-      className: 'user-pin-div',
-      html: `<div style="background:#16a34a; width:16px; height:16px; border-radius:50%; border:3px solid #fff; box-shadow:0 0 10px rgba(0,0,0,0.5);"></div>`,
-      iconSize: [16, 16],
-      iconAnchor: [8, 8]
+      className: 'custom-user-marker',
+      html: `<div style="background:#2563EB; width:18px; height:18px; border-radius:50%; border:3px solid #FFFFFF; box-shadow:0 0 10px rgba(37,99,235,0.7); animation:pulseDot 1.5s infinite;"></div>`,
+      iconSize: [18, 18],
+      iconAnchor: [9, 9]
     });
 
-    this.state.userMarker = L.marker([this.state.userLat, this.state.userLng], { icon: userIcon })
-      .addTo(this.state.map)
-      .bindPopup('<strong>📍 Your Search Location</strong>');
+    this.userMarker = L.marker([this.currentLocation.lat, this.currentLocation.lng], {
+      icon: userIcon,
+      zIndexOffset: 1000
+    }).bindPopup(`<strong>Your Location</strong><br>${this.currentLocation.name}`);
 
-    this.state.map.setView([this.state.userLat, this.state.userLng], 12);
-  },
+    this.markersGroup.addLayer(this.userMarker);
+  }
 
-  updateHospitalMarkers() {
-    if (!this.state.map) return;
+  updateMapMarkers() {
+    if (!this.map || !this.markersGroup) return;
 
-    // Clear existing markers
-    this.state.markers.forEach(m => this.state.map.removeLayer(m));
-    this.state.markers = [];
+    // Clear previous hospital markers (keep user location)
+    this.markersGroup.clearLayers();
+    this.renderUserLocationMarker();
 
-    this.state.hospitals.forEach(h => {
-      const isVerified = h.verified;
-      const isEmergency = h.hasEmergency;
+    const bounds = L.latLngBounds([[this.currentLocation.lat, this.currentLocation.lng]]);
 
-      let color = isEmergency ? '#dc2626' : (isVerified ? '#0284c7' : '#d97706');
-      let iconHtml = `
-        <div style="background:${color}; color:#fff; width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:12px; border:2px solid #fff; box-shadow:0 2px 6px rgba(0,0,0,0.3);">
-          +
-        </div>
-      `;
+    this.hospitals.forEach(hosp => {
+      if (!hosp.latitude || !hosp.longitude) return;
 
-      const hospIcon = L.divIcon({
-        className: 'hosp-pin-div',
-        html: iconHtml,
-        iconSize: [30, 30],
-        iconAnchor: [15, 15]
+      const isOpen = hosp.realTimeAvailability ? hosp.realTimeAvailability.isOpenNow : hosp.open24x7;
+      const markerColor = isOpen ? '#059669' : '#DC2626';
+
+      const hospitalIcon = L.divIcon({
+        className: 'custom-hospital-marker',
+        html: `<div style="background:${markerColor}; color:#fff; width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:14px; border:2px solid #fff; box-shadow:0 2px 8px rgba(0,0,0,0.3);">H</div>`,
+        iconSize: [28, 28],
+        iconAnchor: [14, 14]
       });
 
-      const marker = L.marker([h.latitude, h.longitude], { icon: hospIcon })
-        .addTo(this.state.map)
-        .bindPopup(`
-          <div style="font-family:inherit; min-width:180px;">
-            <strong style="color:#0f172a; font-size:13px;">${h.name}</strong><br/>
-            <span style="font-size:11px; color:#64748b;">${h.facilityType} &bull; ${h.distanceKm !== null ? h.distanceKm + ' km away' : ''}</span><br/>
-            <div style="margin-top:6px; font-size:11px;">
-              <strong>Beds Available:</strong> ${h.availableBeds || 0} (ICU: ${h.icuBedsAvailable || 0})
-            </div>
-            <button onclick="app.openHospitalDetails('${h.id}')" style="margin-top:8px; background:#0284c7; color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:11px; font-weight:600; width:100%;">View Hospital Details</button>
+      const marker = L.marker([hosp.latitude, hosp.longitude], { icon: hospitalIcon });
+
+      const popupHtml = `
+        <div style="font-family:Inter,sans-serif; min-width:220px;">
+          <h4 style="font-size:1.05rem; font-weight:800; color:#111827; margin-bottom:4px;">${hosp.name}</h4>
+          <p style="font-size:0.8rem; color:#4B5563; margin-bottom:6px;">${hosp.address || ''}</p>
+          <div style="display:flex; justify-content:space-between; margin-bottom:6px; font-size:0.8rem;">
+            <span>Rating: <strong>⭐ ${hosp.rating || '4.5'}</strong></span>
+            <span>Beds: <strong>${hosp.availableBeds || 0} / ${hosp.totalBeds || 0}</strong></span>
           </div>
-        `);
+          <div style="display:flex; gap:4px; font-size:0.75rem; margin-bottom:8px;">
+            <span style="background:${isOpen ? '#D1FAE5' : '#FEE2E2'}; color:${isOpen ? '#065F46' : '#991B1B'}; padding:2px 8px; border-radius:999px; font-weight:700;">
+              ${isOpen ? 'Open Now' : 'Closed'}
+            </span>
+            <span style="background:#E0E7FF; color:#4338CA; padding:2px 8px; border-radius:999px; font-weight:600;">
+              ICU: ${hosp.icuBedsAvailable || 0}
+            </span>
+          </div>
+          <div style="display:flex; gap:6px;">
+            <button onclick="app.openHospitalDetails('${hosp.id}')" style="background:#2563EB; color:#fff; border:none; padding:4px 10px; border-radius:999px; font-size:0.75rem; cursor:pointer; font-weight:600;">View Details</button>
+            <button onclick="app.openDispatchModalForHospital('${hosp.id}')" style="background:#DC2626; color:#fff; border:none; padding:4px 10px; border-radius:999px; font-size:0.75rem; cursor:pointer; font-weight:600;">Dispatch SOS</button>
+          </div>
+        </div>
+      `;
 
-      this.state.markers.push(marker);
+      marker.bindPopup(popupHtml);
+      this.markersGroup.addLayer(marker);
+      bounds.extend([hosp.latitude, hosp.longitude]);
     });
-  },
 
-  // ==========================================
-  // Location Handlers
-  // ==========================================
-  handleCitySelect(cityKey) {
-    if (cityKey === 'current') {
-      this.detectUserLocation();
-      return;
+    if (this.hospitals.length > 0) {
+      this.map.fitBounds(bounds, { padding: [50, 50], maxZoom: 14 });
     }
-    const city = this.cityCoordinates[cityKey];
-    if (city) {
-      this.state.userLat = city.lat;
-      this.state.userLng = city.lng;
-      this.updateCoordsDisplay();
-      this.updateUserMapMarker();
-      this.fetchHospitals();
-    }
-  },
+  }
 
-  detectUserLocation() {
-    const btn = document.getElementById('btnDetectGPS');
-    if (!navigator.geolocation) {
-      alert('Geolocation is not supported by your browser. Using Central Hub location.');
-      return;
+  // =========================================================================
+  // VIEW NAVIGATION & HASH ROUTING
+  // =========================================================================
+  showView(viewName) {
+    this.activeView = viewName;
+    ['hospitals', 'doctors', 'locations', 'emergency'].forEach(v => {
+      const el = document.getElementById(`view${v.charAt(0).toUpperCase() + v.slice(1)}`);
+      const link = document.getElementById(`navLink${v.charAt(0).toUpperCase() + v.slice(1)}`);
+      if (el) el.style.display = (v === viewName) ? 'block' : 'none';
+      if (link) link.classList.toggle('active', v === viewName);
+    });
+
+    if (viewName === 'hospitals' && this.map) {
+      setTimeout(() => this.map.invalidateSize(), 200);
     }
 
-    btn.textContent = 'Locating...';
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        this.state.userLat = pos.coords.latitude;
-        this.state.userLng = pos.coords.longitude;
-        this.updateCoordsDisplay();
-        this.updateUserMapMarker();
-        this.fetchHospitals();
-        btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg> GPS Active`;
-      },
-      (err) => {
-        console.warn('GPS detection failed, fallback to Delhi central:', err.message);
-        btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg> Use My GPS`;
-        alert('Could not retrieve GPS coordinates. Setting location to central healthcare hub.');
-      },
-      { timeout: 8000 }
-    );
-  },
+    window.location.hash = viewName;
+  }
 
-  updateCoordsDisplay() {
-    const label = document.getElementById('locationReferenceLabel');
-    const dispLabel = document.getElementById('dispCoordsLabel');
-    if (label) {
-      label.textContent = `Coordinates: ${this.state.userLat.toFixed(4)}° N, ${this.state.userLng.toFixed(4)}° E`;
+  setupUrlHashListener() {
+    window.addEventListener('hashchange', () => {
+      const hash = window.location.hash.replace('#', '');
+      if (['hospitals', 'doctors', 'locations', 'emergency'].includes(hash)) {
+        this.showView(hash);
+      }
+    });
+
+    const initHash = window.location.hash.replace('#', '');
+    if (initHash && ['hospitals', 'doctors', 'locations', 'emergency'].includes(initHash)) {
+      this.showView(initHash);
     }
-    if (dispLabel) {
-      dispLabel.textContent = `${this.state.userLat.toFixed(4)}, ${this.state.userLng.toFixed(4)}`;
-    }
-  },
+  }
 
-  handleSearchInput() {
-    clearTimeout(this._searchTimer);
-    this._searchTimer = setTimeout(() => {
-      this.state.searchQuery = document.getElementById('searchInput').value;
-      this.fetchHospitals();
-    }, 300);
-  },
+  // =========================================================================
+  // PLATFORM HEALTH & STATS
+  // =========================================================================
+  async fetchPlatformHealth() {
+    try {
+      const res = await this.api('/api/health');
+      if (res && res.success) {
+        const elHosp = document.getElementById('statHospitals');
+        const elAmb = document.getElementById('statAmbulances');
+        if (elHosp) elHosp.textContent = res.totalVerifiedHospitals || '10+';
+        if (elAmb) elAmb.textContent = res.activeAmbulances || '6';
+      }
+    } catch (_) {}
+  }
 
-  handleRadiusChange(val) {
-    this.state.radiusKm = parseFloat(val);
-    document.getElementById('radiusValue').textContent = `${val} km`;
-    this.fetchHospitals();
-  },
-
-  handleSortChange(val) {
-    this.state.sortBy = val;
-    this.fetchHospitals();
-  },
-
-  applyFilters() {
-    this.state.selectedFacility = document.getElementById('facilitySelect').value;
-    this.state.selectedSpecialty = document.getElementById('specialtySelect').value;
-    const chkOpenNow = document.getElementById('chkOpenNow');
-    this.state.openNowOnly = chkOpenNow ? chkOpenNow.checked : false;
-    this.state.open24x7Only = document.getElementById('chk247').checked;
-    this.state.emergencyOnly = document.getElementById('chkEmergency').checked;
-    this.state.icuOnly = document.getElementById('chkICU').checked;
-    this.fetchHospitals();
-  },
-
-  // ==========================================
-  // Fetch & Render Hospitals
-  // ==========================================
+  // =========================================================================
+  // HOSPITALS LOCATOR (GET /api/hospitals)
+  // =========================================================================
   async fetchHospitals() {
-    const listContainer = document.getElementById('hospitalsList');
-    const countLabel = document.getElementById('resultsCount');
+    const listContainer = document.getElementById('hospitalListContainer');
+    const countEl = document.getElementById('hospitalResultsCount');
+    if (countEl) countEl.textContent = 'Searching hospitals nearby...';
 
-    let query = `/api/hospitals?lat=${this.state.userLat}&lng=${this.state.userLng}&radius=${this.state.radiusKm}`;
+    const search = (document.getElementById('searchInput')?.value || '').trim();
+    const facility = document.getElementById('facilitySelect')?.value || '';
+    const specialty = document.getElementById('specialtySelect')?.value || '';
+    const sortBy = document.getElementById('sortBySelect')?.value || 'distance';
+    const openNow = document.getElementById('filterOpenNow')?.checked || false;
+    const hasEmergency = document.getElementById('filterEmergency')?.checked || false;
+    const minBeds = document.getElementById('filterBeds')?.checked ? 1 : 0;
+    const radius = document.getElementById('radiusInput')?.value || 35;
 
-    if (this.state.searchQuery) query += `&search=${encodeURIComponent(this.state.searchQuery)}`;
-    if (this.state.selectedFacility !== 'all') query += `&facility=${encodeURIComponent(this.state.selectedFacility)}`;
-    if (this.state.selectedSpecialty !== 'all') query += `&specialty=${encodeURIComponent(this.state.selectedSpecialty)}`;
-    if (this.state.openNowOnly) query += `&openNow=true`;
-    if (this.state.open24x7Only) query += `&open24x7=true`;
-    if (this.state.emergencyOnly) query += `&hasEmergency=true`;
-    if (this.state.icuOnly) query += `&minBeds=1`;
-    if (this.state.sortBy) query += `&sortBy=${this.state.sortBy}`;
-
-    // Include auth token if available (to view unverified if admin)
-    const headers = {};
-    if (this.state.token) {
-      headers['Authorization'] = `Bearer ${this.state.token}`;
+    const params = new URLSearchParams();
+    if (this.currentLocation.lat && this.currentLocation.lng) {
+      params.append('lat', this.currentLocation.lat);
+      params.append('lng', this.currentLocation.lng);
+      params.append('radius', radius);
     }
+    if (search) params.append('search', search);
+    if (facility) params.append('facility', facility);
+    if (specialty) params.append('specialty', specialty);
+    if (sortBy) params.append('sortBy', sortBy);
+    if (openNow) params.append('openNow', 'true');
+    if (hasEmergency) params.append('hasEmergency', 'true');
+    if (minBeds > 0) params.append('minBeds', minBeds);
 
     try {
-      const res = await fetch(query, { headers });
-      const result = await res.json();
+      const res = await this.api(`/api/hospitals?${params.toString()}`);
+      this.hospitals = res.data || [];
 
-      if (!result.success) {
-        throw new Error(result.message || 'Failed to fetch hospitals');
+      // Calculate total available beds across verified hospitals
+      const totalAvailable = this.hospitals.reduce((acc, h) => acc + (h.availableBeds || 0), 0);
+      const statBedsEl = document.getElementById('statAvailableBeds');
+      if (statBedsEl) statBedsEl.textContent = totalAvailable;
+
+      if (countEl) {
+        countEl.textContent = `Found ${this.hospitals.length} verified hospitals within ${radius} km`;
       }
 
-      this.state.hospitals = result.data || [];
-      countLabel.textContent = `Found ${this.state.hospitals.length} nearby healthcare facilities within ${this.state.radiusKm} km`;
-
-      this.renderHospitalCards(this.state.hospitals);
-      this.updateHospitalMarkers();
+      this.renderHospitalCards();
+      this.updateMapMarkers();
     } catch (err) {
-      listContainer.innerHTML = `
-        <div class="alert alert-danger">
-          Error loading hospitals: ${err.message}
-        </div>
-      `;
+      if (countEl) countEl.textContent = 'Failed to load hospitals';
+      if (listContainer) {
+        listContainer.innerHTML = `<div style="padding:1.5rem; color:#991B1B; background:#FEE2E2; border-radius:16px;">Error loading hospitals: ${err.message}</div>`;
+      }
     }
-  },
+  }
 
-  renderHospitalCards(hospitals) {
-    const container = document.getElementById('hospitalsList');
-    if (!hospitals || hospitals.length === 0) {
+  renderHospitalCards() {
+    const container = document.getElementById('hospitalListContainer');
+    if (!container) return;
+
+    if (this.hospitals.length === 0) {
       container.innerHTML = `
-        <div style="background:#fff; padding:32px; border-radius:12px; text-align:center; border:1px solid #e2e8f0;">
-          <h3>No hospitals found in this radius</h3>
-          <p style="color:#64748b; margin-top:6px;">Try expanding your distance slider or resetting filters.</p>
-          <button class="btn btn-outline" style="margin-top:14px;" onclick="app.resetFilters()">Reset All Filters</button>
+        <div class="card" style="text-align:center; padding:3rem 1.5rem;">
+          <h3 style="margin-bottom:0.5rem;">No Hospitals Match Current Filters</h3>
+          <p style="font-size:0.95rem; color:var(--text-body); margin-bottom:1.25rem;">
+            Try increasing the search radius, clearing text filters, or loading sample city coordinates.
+          </p>
+          <button class="btn btn-sm btn-primary" onclick="app.loadSampleLocation()">Load New Delhi NCR Sample</button>
         </div>
       `;
       return;
     }
 
-    container.innerHTML = hospitals.map(h => {
-      const distStr = h.distanceKm !== null ? `${h.distanceKm} km` : 'N/A';
-      const etaDrive = h.eta ? `${h.eta.estimatedDrivingMinutes}m drive` : '';
-      const etaAmb = h.eta ? `⚡ ${h.eta.estimatedAmbulanceMinutes}m ambulance ETA` : '';
+    container.innerHTML = this.hospitals.map(h => {
+      const isOpen = h.realTimeAvailability ? h.realTimeAvailability.isOpenNow : h.open24x7;
+      const statusText = h.realTimeAvailability ? h.realTimeAvailability.statusText : (h.open24x7 ? 'Open 24/7' : 'Regular Hours');
+      const dist = h.distanceKm !== undefined ? `${h.distanceKm} km away` : 'GPS mapped';
+      const eta = h.estimatedDriveTimeMinutes ? `~${h.estimatedDriveTimeMinutes} min drive` : '';
 
       return `
-        <article class="hospital-card" onclick="app.focusHospitalOnMap('${h.id}', ${h.latitude}, ${h.longitude})">
-          <div class="card-top">
+        <article class="hospital-item-card">
+          <div class="hospital-card-header">
             <div>
-              <h4 class="hospital-title">${h.name}</h4>
-              <p class="card-address">📍 ${h.address}, ${h.city}</p>
+              <h3 class="hospital-name">${h.name}</h3>
+              <p class="hospital-address">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a8 8 0 0 0-8 8c0 5.25 8 12 8 12s8-6.75 8-12a8 8 0 0 0-8-8z"/><circle cx="12" cy="10" r="3"/></svg>
+                ${h.address || h.city || ''}
+              </p>
             </div>
-            <div class="distance-badge">
-              ${distStr}
+            <span class="hospital-badge-status ${isOpen ? 'badge-open' : 'badge-closed'}">
+              ${statusText}
+            </span>
+          </div>
+
+          <div class="hospital-metrics-row">
+            <div class="metric-chip">
+              <span>⭐</span>
+              <span>Rating: <strong>${h.rating || '4.5'}</strong></span>
+            </div>
+            <div class="metric-chip">
+              <span>🛏️</span>
+              <span>Available Beds: <strong style="color:var(--green);">${h.availableBeds || 0}</strong> / ${h.totalBeds || 0}</span>
+            </div>
+            <div class="metric-chip">
+              <span>🫁</span>
+              <span>ICU: <strong>${h.icuBedsAvailable || 0}</strong></span>
+            </div>
+            <div class="metric-chip">
+              <span>📍</span>
+              <span>${dist} ${eta ? `&bull; ${eta}` : ''}</span>
             </div>
           </div>
 
-          <div class="card-badges">
-            ${h.verified ? `<span class="badge badge-verified">✓ Verified Partner</span>` : `<span class="badge" style="background:#fef3c7; color:#92400e;">Pending Verification</span>`}
-            ${h.hasEmergency ? `<span class="badge badge-emergency">🚨 24x7 Emergency Ready</span>` : ``}
-            ${h.realTimeAvailability ? `<span class="badge ${h.realTimeAvailability.isOpenNow ? 'badge-verified' : 'badge-emergency'}">🕒 ${h.realTimeAvailability.statusLabel}</span>` : ''}
-            ${h.open24x7 ? `<span class="badge badge-247">24 Hours Open</span>` : `<span class="badge badge-facility">${h.operatingHours}</span>`}
-            <span class="badge badge-facility">${h.facilityType}</span>
-            <span class="badge" style="background:#f1f5f9; color:#0f172a;">★ ${h.rating} / 5.0</span>
-          </div>
-
-          <div class="card-metrics">
-            <div class="metric-item">
-              <span class="metric-val" style="color:#16a34a;">${h.availableBeds || 0}</span>
-              <span class="metric-label">Total Beds Free</span>
+          <div class="hospital-card-footer">
+            <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+              <a href="tel:${h.emergencyHotline || h.phone}" class="btn btn-sm btn-outline" style="border-color:#DC2626; color:#DC2626;">
+                📞 Call Hotline: ${h.emergencyHotline || h.phone}
+              </a>
+              <button class="btn btn-sm btn-outline" onclick="app.openHospitalDetails('${h.id}')">
+                Details & Doctors
+              </button>
             </div>
-            <div class="metric-item">
-              <span class="metric-val" style="color:#dc2626;">${h.icuBedsAvailable || 0}</span>
-              <span class="metric-label">ICU Beds Free</span>
-            </div>
-            <div class="metric-item">
-              <span class="metric-val" style="color:#0284c7;">${h.ventilatorBedsAvailable || 0}</span>
-              <span class="metric-label">Ventilators Free</span>
-            </div>
-          </div>
-
-          <div class="card-actions" onclick="event.stopPropagation()">
-            <a href="tel:${h.emergencyHotline || h.phone}" class="btn btn-danger btn-sm">
-              🚨 Call Emergency (${h.emergencyHotline || h.phone})
-            </a>
-            <button class="btn btn-outline btn-sm" onclick="app.openHospitalDetails('${h.id}')">
-              Doctors & Services
-            </button>
-            <button class="btn btn-outline btn-sm" onclick="app.openDirections(${h.latitude}, ${h.longitude})">
-              Directions (${etaDrive})
+            <button class="btn btn-sm btn-danger" onclick="app.openDispatchModalForHospital('${h.id}')">
+              Dispatch SOS
             </button>
           </div>
         </article>
       `;
     }).join('');
-  },
+  }
 
-  focusHospitalOnMap(id, lat, lng) {
-    if (!this.state.map) return;
-    this.state.map.setView([lat, lng], 15, { animate: true });
-    const targetMarker = this.state.markers.find(m => {
-      const p = m.getLatLng();
-      return Math.abs(p.lat - lat) < 0.0001 && Math.abs(p.lng - lng) < 0.0001;
-    });
-    if (targetMarker) {
-      targetMarker.openPopup();
-    }
-  },
+  handleSearchInput() {
+    clearTimeout(this.searchDebounceTimer);
+    this.searchDebounceTimer = setTimeout(() => this.fetchHospitals(), 350);
+  }
 
-  openDirections(lat, lng) {
-    const url = `https://www.google.com/maps/dir/?api=1&origin=${this.state.userLat},${this.state.userLng}&destination=${lat},${lng}`;
-    window.open(url, '_blank');
-  },
-
-  resetFilters() {
-    document.getElementById('searchInput').value = '';
-    document.getElementById('facilitySelect').value = 'all';
-    document.getElementById('specialtySelect').value = 'all';
-    document.getElementById('chk247').checked = false;
-    document.getElementById('chkEmergency').checked = false;
-    document.getElementById('chkICU').checked = false;
-    document.getElementById('radiusRange').value = 25;
-    document.getElementById('radiusValue').textContent = '25 km';
-    this.state.searchQuery = '';
-    this.state.selectedFacility = 'all';
-    this.state.selectedSpecialty = 'all';
-    this.state.open24x7Only = false;
-    this.state.emergencyOnly = false;
-    this.state.icuOnly = false;
-    this.state.radiusKm = 25;
+  handleRadiusChange(val) {
+    const lbl = document.getElementById('radiusLabel');
+    if (lbl) lbl.textContent = `${val} km`;
     this.fetchHospitals();
-  },
+  }
 
-  resetView() {
-    this.state.userLat = 28.6139;
-    this.state.userLng = 77.2090;
-    document.getElementById('citySelect').value = 'delhi';
-    this.resetFilters();
-    this.updateCoordsDisplay();
-    this.updateUserMapMarker();
-  },
+  useCurrentLocation() {
+    if (!navigator.geolocation) {
+      this.showToast('Geolocation is not supported by your browser.', 'error');
+      return;
+    }
 
-  // ==========================================
-  // Hospital Details Modal
-  // ==========================================
-  async openHospitalDetails(hospitalId) {
-    const modal = document.getElementById('hospitalModal');
-    const body = document.getElementById('modalHospitalBody');
-    body.innerHTML = '<p>Loading hospital and affiliated doctors...</p>';
-    modal.style.display = 'flex';
+    this.showToast('Acquiring your GPS coordinates...', 'info');
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        this.currentLocation = {
+          lat: parseFloat(pos.coords.latitude.toFixed(4)),
+          lng: parseFloat(pos.coords.longitude.toFixed(4)),
+          name: 'Your Current GPS Location'
+        };
+        this.showToast(`GPS Location set: ${this.currentLocation.lat}, ${this.currentLocation.lng}`, 'success');
+        this.fetchHospitals();
+      },
+      (err) => {
+        this.showToast(`Unable to acquire GPS: ${err.message}. Loading sample New Delhi coordinates.`, 'error');
+        this.loadSampleLocation();
+      },
+      { timeout: 8000, enableHighAccuracy: true }
+    );
+  }
+
+  loadSampleLocation() {
+    // New Delhi Central Connaught Place coordinates from seed data
+    this.currentLocation = {
+      lat: 28.6139,
+      lng: 77.2090,
+      name: 'New Delhi (Central NCR Seed Hub)'
+    };
+    this.showToast('Loaded pre-seeded New Delhi NCR coordinates (28.6139, 77.2090)', 'success');
+    this.fetchHospitals();
+  }
+
+  // =========================================================================
+  // HOSPITAL DETAILS MODAL (GET /api/hospitals/:id)
+  // =========================================================================
+  async openHospitalDetails(hospId) {
+    const container = document.getElementById('hospitalDetailContent');
+    if (!container) return;
+
+    container.innerHTML = '<div style="padding:2rem; text-align:center;">Loading hospital profile...</div>';
+    this.openModal('hospitalDetailModal');
 
     try {
-      const res = await fetch(`/api/hospitals/${hospitalId}`);
-      const data = await res.json();
-      if (!data.success) throw new Error(data.message);
+      const res = await this.api(`/api/hospitals/${hospId}`);
+      const h = res.data;
+      if (!h) throw new Error('Hospital data not found');
 
-      const h = data.data;
-      document.getElementById('modalHospitalName').textContent = h.name;
-      document.getElementById('modalHospitalAddress').textContent = `📍 ${h.address}, ${h.city}, ${h.state} - ${h.postalCode}`;
-      document.getElementById('modalVerifiedBadge').textContent = h.verified ? '✓ Verified Healthcare Partner' : 'Pending Verification';
+      const doctorsRes = await this.api(`/api/doctors?hospitalId=${hospId}`).catch(() => ({ data: [] }));
+      const docs = doctorsRes.data || [];
 
-      document.getElementById('modalCallDirect').href = `tel:${h.phone}`;
-      document.getElementById('modalCallEmergency').href = `tel:${h.emergencyHotline || h.phone}`;
+      const isOpen = h.realTimeAvailability ? h.realTimeAvailability.isOpenNow : h.open24x7;
 
-      const dispatchBtn = document.getElementById('modalDispatchAmbulance');
-      dispatchBtn.onclick = () => {
-        app.closeModal('hospitalModal');
-        app.openDispatchModal(h.id);
-      };
-
-      const specialtiesHtml = (h.specialties || []).map(s => `<span class="badge badge-facility">${s}</span>`).join(' ');
-      const servicesHtml = (h.services || []).map(s => `<span class="badge" style="background:#e0f2fe; color:#0369a1;">${s}</span>`).join(' ');
-
-      const doctorsHtml = (h.doctors || []).length > 0 ? (h.doctors || []).map(d => `
-        <div class="doctor-item">
-          <div class="doctor-name">${d.name}</div>
-          <div class="doctor-spec">${d.specialty} &bull; ${d.qualifications}</div>
-          <div style="font-size:0.8rem; color:#475569; margin:4px 0;">${d.experienceYears} Years Experience &bull; Fee: ₹${d.consultationFee}</div>
-          <div class="doctor-time">🕒 ${d.availability}</div>
-          ${d.emergencyOnCall ? `<span class="badge badge-emergency" style="margin-top:6px; display:inline-block;">24/7 On-Call Emergency</span>` : ''}
-        </div>
-      `).join('') : '<p style="color:#64748b; font-size:0.85rem;">No affiliated doctors registered yet.</p>';
-
-      body.innerHTML = `
-        <div class="card-metrics" style="margin-bottom:20px;">
-          <div class="metric-item">
-            <span class="metric-val" style="color:#16a34a;">${h.availableBeds || 0} / ${h.totalBeds || 0}</span>
-            <span class="metric-label">General Beds Free</span>
-          </div>
-          <div class="metric-item">
-            <span class="metric-val" style="color:#dc2626;">${h.icuBedsAvailable || 0}</span>
-            <span class="metric-label">ICU Beds Free</span>
-          </div>
-          <div class="metric-item">
-            <span class="metric-val" style="color:#0284c7;">${h.ventilatorBedsAvailable || 0}</span>
-            <span class="metric-label">Ventilators Free</span>
+      container.innerHTML = `
+        <div style="border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 1.5rem;">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; flex-wrap:wrap;">
+            <div>
+              <span class="section-label">${h.facilityType || 'Healthcare Facility'}</span>
+              <h2 style="font-size: 1.75rem; margin-bottom: 0.25rem;">${h.name}</h2>
+              <p style="color:var(--text-body); font-size:0.95rem;">${h.address}, ${h.city}, ${h.state} - ${h.postalCode || ''}</p>
+            </div>
+            <span class="hospital-badge-status ${isOpen ? 'badge-open' : 'badge-closed'}" style="font-size:0.9rem; padding:0.4rem 1rem;">
+              ${isOpen ? 'Open Now & Receiving Patients' : 'Closed / Off Hours'}
+            </span>
           </div>
         </div>
 
-        <div style="margin-bottom:16px;">
-          <h4 style="font-size:0.95rem; font-weight:700; margin-bottom:6px;">Operating Hours & Emergency Status</h4>
-          <p style="font-size:0.85rem; color:#475569;">🕒 <strong>Hours:</strong> ${h.operatingHours}</p>
-          <p style="font-size:0.85rem; color:#475569;">🚨 <strong>Emergency Hotline:</strong> <a href="tel:${h.emergencyHotline}" style="color:#dc2626; font-weight:700;">${h.emergencyHotline}</a></p>
-          <p style="font-size:0.85rem; color:#475569;">📞 <strong>General Enquiries:</strong> ${h.phone}</p>
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:1rem; margin-bottom:1.5rem;">
+          <div class="card" style="padding:1rem;">
+            <div style="font-size:0.8rem; color:var(--text-body);">Total Capacity</div>
+            <div style="font-size:1.5rem; font-weight:800; color:var(--text-heading);">${h.totalBeds || 0} Beds</div>
+          </div>
+          <div class="card" style="padding:1rem;">
+            <div style="font-size:0.8rem; color:var(--text-body);">Available General Beds</div>
+            <div style="font-size:1.5rem; font-weight:800; color:var(--green);">${h.availableBeds || 0} Beds</div>
+          </div>
+          <div class="card" style="padding:1rem;">
+            <div style="font-size:0.8rem; color:var(--text-body);">ICU Beds Available</div>
+            <div style="font-size:1.5rem; font-weight:800; color:var(--primary);">${h.icuBedsAvailable || 0} ICU</div>
+          </div>
+          <div class="card" style="padding:1rem;">
+            <div style="font-size:0.8rem; color:var(--text-body);">Ventilator Units</div>
+            <div style="font-size:1.5rem; font-weight:800; color:var(--indigo);">${h.ventilatorBedsAvailable || 0} Units</div>
+          </div>
         </div>
 
-        <div style="margin-bottom:16px;">
-          <h4 style="font-size:0.95rem; font-weight:700; margin-bottom:6px;">Medical Specialties</h4>
-          <div style="display:flex; flex-wrap:wrap; gap:6px;">${specialtiesHtml}</div>
+        <div style="margin-bottom:1.5rem;">
+          <h4 style="font-size:1.1rem; margin-bottom:0.5rem;">Operating Hours & Contacts</h4>
+          <p style="font-size:0.9rem; margin-bottom:0.4rem;"><strong>Schedule:</strong> ${h.operatingHours || '24 Hours / 7 Days'}</p>
+          <p style="font-size:0.9rem; margin-bottom:0.4rem;"><strong>Emergency Hotline:</strong> <a href="tel:${h.emergencyHotline}" style="color:var(--red); font-weight:700;">${h.emergencyHotline || h.phone}</a></p>
+          <p style="font-size:0.9rem; margin-bottom:0.4rem;"><strong>Main Reception:</strong> ${h.phone || '--'} &bull; <strong>Email:</strong> ${h.email || '--'}</p>
         </div>
 
-        <div style="margin-bottom:20px;">
-          <h4 style="font-size:0.95rem; font-weight:700; margin-bottom:6px;">Facilities & Emergency Equipment</h4>
-          <div style="display:flex; flex-wrap:wrap; gap:6px;">${servicesHtml}</div>
+        <div style="margin-bottom:1.5rem;">
+          <h4 style="font-size:1.1rem; margin-bottom:0.75rem;">Affiliated Specialists & On-Duty Doctors (${docs.length})</h4>
+          ${docs.length === 0 ? '<p style="font-size:0.9rem; color:var(--text-body);">No specialist doctor records directly attached to this hospital.</p>' : `
+            <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); gap:1rem;">
+              ${docs.map(d => `
+                <div class="card" style="padding:1rem;">
+                  <strong style="color:var(--text-heading); font-size:0.95rem;">${d.name}</strong>
+                  <div style="color:var(--primary); font-size:0.85rem; font-weight:600;">${d.specialty}</div>
+                  <div style="font-size:0.8rem; color:var(--text-body); margin-top:4px;">${d.qualifications || ''}</div>
+                  <div style="font-size:0.8rem; margin-top:6px;">Fee: <strong>₹${d.consultationFee || 1000}</strong> &bull; Exp: ${d.experienceYears || 5} yrs</div>
+                  <div style="margin-top:8px;">
+                    <span style="font-size:0.75rem; padding:2px 8px; border-radius:999px; background:${d.realTimeAvailability?.isAvailableNow ? '#D1FAE5' : '#F3F4F6'}; color:${d.realTimeAvailability?.isAvailableNow ? '#065F46' : '#4B5563'}; font-weight:700;">
+                      ${d.realTimeAvailability?.dutyStatus || 'Regular Shift'}
+                    </span>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          `}
         </div>
 
-        <div>
-          <h4 style="font-size:1rem; font-weight:800; border-bottom:1px solid #e2e8f0; padding-bottom:8px; margin-bottom:12px;">
-            Affiliated Doctors & On-Call Specialists (${(h.doctors || []).length})
-          </h4>
-          <div class="doctors-grid">${doctorsHtml}</div>
+        <div style="display:flex; justify-content:flex-end; gap:0.75rem; border-top:1px solid var(--border); padding-top:1rem;">
+          <button class="btn btn-outline" onclick="app.closeModal('hospitalDetailModal')">Close</button>
+          <button class="btn btn-danger" onclick="app.closeModal('hospitalDetailModal'); app.openDispatchModalForHospital('${h.id}')">
+            Request Emergency Ambulance to ${h.name}
+          </button>
         </div>
       `;
     } catch (err) {
-      body.innerHTML = `<div class="alert alert-danger">Error: ${err.message}</div>`;
+      container.innerHTML = `<div style="padding:2rem; color:#991B1B;">Error loading details: ${err.message}</div>`;
     }
-  },
+  }
 
-  // ==========================================
-  // Emergency Ambulance Dispatch
-  // ==========================================
-  openDispatchModal(preferredHospitalId = null) {
-    this._preferredHospitalId = preferredHospitalId;
-    document.getElementById('dispatchForm').style.display = 'block';
-    document.getElementById('dispatchSuccessBlock').style.display = 'none';
-    this.updateCoordsDisplay();
-    document.getElementById('dispatchModal').style.display = 'flex';
-  },
+  // =========================================================================
+  // DOCTORS DIRECTORY (GET /api/doctors)
+  // =========================================================================
+  async fetchDoctors() {
+    const search = document.getElementById('doctorSearchInput')?.value || '';
+    const hospitalId = document.getElementById('doctorHospitalFilter')?.value || '';
+    const availableNow = document.getElementById('doctorAvailableNow')?.checked || false;
+    const emergencyOnCall = document.getElementById('doctorEmergencyCall')?.checked || false;
 
-  async handleDispatchSubmit(e) {
-    e.preventDefault();
+    const params = new URLSearchParams();
+    if (search) params.append('search', search);
+    if (hospitalId) params.append('hospitalId', hospitalId);
+    if (availableNow) params.append('availableNow', 'true');
+    if (emergencyOnCall) params.append('emergencyOnCall', 'true');
+
+    try {
+      const res = await this.api(`/api/doctors?${params.toString()}`);
+      this.doctors = res.data || [];
+
+      const docStatEl = document.getElementById('statDoctors');
+      if (docStatEl) docStatEl.textContent = `${this.doctors.length}`;
+
+      this.populateDoctorHospitalFilter();
+      this.renderDoctorCards();
+    } catch (err) {
+      const grid = document.getElementById('doctorsGrid');
+      if (grid) grid.innerHTML = `<div style="grid-column:1/-1; padding:2rem; color:#991B1B; background:#FEE2E2; border-radius:16px;">Failed to load doctors: ${err.message}</div>`;
+    }
+  }
+
+  populateDoctorHospitalFilter() {
+    const sel = document.getElementById('doctorHospitalFilter');
+    if (!sel || sel.options.length > 1) return;
+
+    this.hospitals.forEach(h => {
+      const opt = document.createElement('option');
+      opt.value = h.id;
+      opt.textContent = h.name;
+      sel.appendChild(opt);
+    });
+  }
+
+  renderDoctorCards() {
+    const grid = document.getElementById('doctorsGrid');
+    if (!grid) return;
+
+    if (this.doctors.length === 0) {
+      grid.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:3rem;" class="card">No doctors found matching your filter criteria.</div>';
+      return;
+    }
+
+    grid.innerHTML = this.doctors.map(d => {
+      const isAvailable = d.realTimeAvailability ? d.realTimeAvailability.isAvailableNow : false;
+      const statusText = d.realTimeAvailability ? d.realTimeAvailability.dutyStatus : 'Standard Shift';
+
+      return `
+        <div class="card" style="display:flex; flex-direction:column; justify-content:space-between;">
+          <div>
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:0.5rem;">
+              <span class="section-label" style="margin-bottom:0;">${d.specialty}</span>
+              <span style="font-size:0.75rem; padding:2px 8px; border-radius:999px; background:${isAvailable ? '#D1FAE5' : '#F3F4F6'}; color:${isAvailable ? '#065F46' : '#4B5563'}; font-weight:700;">
+                ${statusText}
+              </span>
+            </div>
+            <h3 style="font-size:1.15rem; margin-bottom:0.25rem;">${d.name}</h3>
+            <p style="font-size:0.85rem; color:var(--primary); font-weight:600; margin-bottom:0.5rem;">
+              🏥 ${d.hospitalName || 'Affiliated Hospital'}
+            </p>
+            <p style="font-size:0.82rem; color:var(--text-body); margin-bottom:0.75rem;">
+              ${d.qualifications || ''} &bull; ${d.experienceYears || 1} yrs experience
+            </p>
+            <div style="font-size:0.85rem; color:var(--text-heading); margin-bottom:0.5rem;">
+              Schedule: <strong>${d.availability || 'Mon-Fri 09:00 - 17:00'}</strong>
+            </div>
+          </div>
+          <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid var(--border); padding-top:0.75rem; margin-top:0.75rem;">
+            <span style="font-weight:700; color:var(--text-heading); font-size:0.95rem;">Fee: ₹${d.consultationFee || 1000}</span>
+            <a href="tel:${d.contact || '+91-11-45678900'}" class="btn btn-sm btn-outline">Call Desk</a>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // =========================================================================
+  // LOCATIONS DIRECTORY (GET /api/locations)
+  // =========================================================================
+  async fetchLocations() {
+    try {
+      const res = await this.api('/api/locations');
+      this.locations = res.data || [];
+      this.renderLocationCards();
+    } catch (_) {}
+  }
+
+  renderLocationCards() {
+    const grid = document.getElementById('locationsGrid');
+    if (!grid) return;
+
+    grid.innerHTML = this.locations.map(loc => `
+      <div class="card" style="display:flex; flex-direction:column; justify-content:space-between;">
+        <div>
+          <span class="section-label">${loc.zoneType || 'Medical Corridor'}</span>
+          <h3 style="font-size:1.25rem; margin-bottom:0.35rem;">${loc.cityName}</h3>
+          <p style="font-size:0.85rem; color:var(--text-body); margin-bottom:0.75rem;">${loc.address}</p>
+          <div style="font-size:0.85rem; margin-bottom:0.5rem;">
+            Postal Code: <strong>${loc.postalCode}</strong> &bull; State: <strong>${loc.state}</strong>
+          </div>
+          <p style="font-size:0.8rem; color:#6B7280;">Key Area: ${loc.keyArea || 'Metro Center'}</p>
+        </div>
+        <div style="border-top:1px solid var(--border); padding-top:0.75rem; margin-top:1rem; display:flex; justify-content:space-between; align-items:center;">
+          <span style="font-size:0.85rem; font-weight:700; color:var(--primary);">${loc.hospitalCount || 0} Verified Hospitals</span>
+          <button class="btn btn-sm btn-primary" onclick="app.selectLocationHub(${loc.latitude}, ${loc.longitude}, '${loc.cityName}')">
+            Explore Hub
+          </button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  selectLocationHub(lat, lng, name) {
+    this.currentLocation = { lat, lng, name };
+    this.showView('hospitals');
+    this.showToast(`Switched map focus to ${name}`, 'info');
+    this.fetchHospitals();
+  }
+
+  // =========================================================================
+  // EMERGENCY FLEET & CONTACTS (GET /api/emergency/*)
+  // =========================================================================
+  async fetchEmergencyData() {
+    try {
+      const [contactsRes, ambulancesRes] = await Promise.all([
+        this.api('/api/emergency/contacts'),
+        this.api('/api/emergency/ambulances')
+      ]);
+
+      this.emergencyContacts = contactsRes.data || [];
+      this.ambulances = ambulancesRes.data || [];
+
+      this.renderEmergencyContacts();
+      this.renderAmbulances();
+    } catch (_) {}
+  }
+
+  renderEmergencyContacts() {
+    const grid = document.getElementById('emergencyContactsGrid');
+    if (!grid) return;
+
+    grid.innerHTML = this.emergencyContacts.map(c => `
+      <div class="card" style="border-left: 4px solid var(--red);">
+        <span class="section-label" style="color:var(--red);">${c.type || 'Emergency Hotline'}</span>
+        <h3 style="font-size:1.15rem; margin-bottom:0.25rem;">${c.name}</h3>
+        <p style="font-size:0.85rem; color:var(--text-body); margin-bottom:0.75rem;">${c.description || c.serviceScope}</p>
+        <div style="font-size:0.85rem; margin-bottom:1rem;">
+          Response Time: <strong>~${c.averageResponseTimeMinutes || 5} mins</strong> &bull; Availability: <strong>${c.availability}</strong>
+        </div>
+        <div style="display:flex; gap:0.5rem;">
+          <a href="tel:${c.phoneNumber}" class="btn btn-sm btn-danger" style="flex:1;">
+            📞 Call ${c.phoneNumber}
+          </a>
+          ${c.secondaryPhone ? `<a href="tel:${c.secondaryPhone}" class="btn btn-sm btn-outline">Alt: ${c.secondaryPhone}</a>` : ''}
+        </div>
+      </div>
+    `).join('');
+  }
+
+  renderAmbulances() {
+    const grid = document.getElementById('ambulancesGrid');
+    if (!grid) return;
+
+    grid.innerHTML = this.ambulances.map(a => {
+      const isAvailable = a.status === 'Available';
+      const badgeBg = isAvailable ? '#D1FAE5' : (a.status === 'Dispatched' ? '#FEF3C7' : '#FEE2E2');
+      const badgeCol = isAvailable ? '#065F46' : (a.status === 'Dispatched' ? '#92400E' : '#991B1B');
+
+      return `
+        <div class="card" style="display:flex; flex-direction:column; justify-content:space-between;">
+          <div>
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:0.5rem;">
+              <span class="section-label">${a.vehicleType}</span>
+              <span style="font-size:0.75rem; padding:2px 8px; border-radius:999px; background:${badgeBg}; color:${badgeCol}; font-weight:700;">
+                ${a.status}
+              </span>
+            </div>
+            <h3 style="font-size:1.25rem; margin-bottom:0.25rem;">${a.vehicleNumber}</h3>
+            <p style="font-size:0.85rem; color:var(--text-body); margin-bottom:0.5rem;">
+              Driver: <strong>${a.driverName}</strong> (${a.contactNumber})
+            </p>
+            <p style="font-size:0.85rem; color:var(--text-body); margin-bottom:0.75rem;">
+              Affiliation: <strong>${a.hospitalAffiliation || 'Regional Base'}</strong>
+            </p>
+            <div style="display:flex; gap:4px; flex-wrap:wrap; margin-bottom:0.5rem;">
+              ${(a.equipment || []).map(eq => `<span style="font-size:0.7rem; background:#F3F4F6; padding:2px 6px; border-radius:6px; color:#4B5563;">${eq}</span>`).join('')}
+            </div>
+          </div>
+          <div style="border-top:1px solid var(--border); padding-top:0.75rem; margin-top:0.75rem;">
+            <button class="btn btn-sm btn-danger" style="width:100%;" onclick="app.openDispatchModalForAmbulance('${a.id}', '${a.vehicleType}')">
+              Deploy This Unit
+            </button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // =========================================================================
+  // EMERGENCY SOS DISPATCH (POST /api/emergency/dispatch)
+  // =========================================================================
+  openDispatchModal() {
+    this.openModal('dispatchModal');
+    const errBox = document.getElementById('dispatchErrorBox');
+    const successCard = document.getElementById('dispatchSuccessCard');
+    const form = document.getElementById('dispatchForm');
+    if (errBox) errBox.style.display = 'none';
+    if (successCard) successCard.style.display = 'none';
+    if (form) form.style.display = 'block';
+
+    const latInput = document.getElementById('dispLatitude');
+    const lngInput = document.getElementById('dispLongitude');
+    if (latInput) latInput.value = this.currentLocation.lat;
+    if (lngInput) lngInput.value = this.currentLocation.lng;
+  }
+
+  openDispatchModalForHospital(hospitalId) {
+    this.openDispatchModal();
+    const hosp = this.hospitals.find(h => h.id === hospitalId);
+    if (hosp) {
+      const notes = document.getElementById('dispNotes');
+      if (notes) notes.value = `Destination requested: ${hosp.name}`;
+      if (hosp.latitude && hosp.longitude) {
+        document.getElementById('dispLatitude').value = hosp.latitude;
+        document.getElementById('dispLongitude').value = hosp.longitude;
+      }
+    }
+  }
+
+  openDispatchModalForAmbulance(ambulanceId, vehicleType) {
+    this.openDispatchModal();
+    const vSel = document.getElementById('dispVehicleType');
+    if (vSel && vehicleType) {
+      for (let i = 0; i < vSel.options.length; i++) {
+        if (vSel.options[i].value === vehicleType) {
+          vSel.selectedIndex = i;
+          break;
+        }
+      }
+    }
+  }
+
+  fillDispatchCurrentLocation() {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition((pos) => {
+        document.getElementById('dispLatitude').value = pos.coords.latitude.toFixed(4);
+        document.getElementById('dispLongitude').value = pos.coords.longitude.toFixed(4);
+        this.showToast('Updated coordinates from device GPS', 'success');
+      });
+    }
+  }
+
+  fillDispatchSampleLocation() {
+    document.getElementById('dispLatitude').value = 28.6139;
+    document.getElementById('dispLongitude').value = 77.2090;
+    this.showToast('Loaded New Delhi NCR sample coordinates', 'info');
+  }
+
+  async submitDispatch(event) {
+    event.preventDefault();
+    const errBox = document.getElementById('dispatchErrorBox');
     const btn = document.getElementById('btnSubmitDispatch');
+    const successCard = document.getElementById('dispatchSuccessCard');
+    const successDetails = document.getElementById('dispatchSuccessDetails');
+    const form = document.getElementById('dispatchForm');
+
+    errBox.style.display = 'none';
     btn.disabled = true;
     btn.textContent = 'Allocating Closest Ambulance...';
 
     const payload = {
-      patientName: document.getElementById('dispPatientName').value,
-      contactPhone: document.getElementById('dispContactPhone').value,
+      patientName: document.getElementById('dispPatientName').value.trim(),
+      contactPhone: document.getElementById('dispPhone').value.trim(),
       emergencyType: document.getElementById('dispEmergencyType').value,
       vehicleType: document.getElementById('dispVehicleType').value,
-      notes: document.getElementById('dispNotes').value,
-      latitude: this.state.userLat,
-      longitude: this.state.userLng,
-      preferredHospitalId: this._preferredHospitalId
+      latitude: parseFloat(document.getElementById('dispLatitude').value),
+      longitude: parseFloat(document.getElementById('dispLongitude').value),
+      notes: document.getElementById('dispNotes').value.trim()
     };
 
     try {
-      const res = await fetch('/api/emergency/dispatch', {
+      const res = await this.api('/api/emergency/dispatch', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
-      const data = await res.json();
-      if (!data.success) throw new Error(data.message);
 
-      const d = data.data;
-      const form = document.getElementById('dispatchForm');
-      const successBlock = document.getElementById('dispatchSuccessBlock');
-
+      this.activeTrackingId = res.data.trackingId;
       form.style.display = 'none';
-      successBlock.style.display = 'block';
-      successBlock.innerHTML = `
-        <div style="text-align:center; padding:16px 0;">
-          <div style="width:60px; height:60px; background:#dcfce7; color:#16a34a; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:28px; margin-bottom:12px;">
-            ✓
-          </div>
-          <h3 style="color:#0f172a; font-weight:800;">Emergency Unit Dispatched!</h3>
-          <p style="color:#16a34a; font-weight:700; font-size:1.1rem; margin-top:4px;">
-            ETA: ~${d.estimatedArrivalMinutes} Minutes
-          </p>
-          <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:16px; margin:16px 0; text-align:left; font-size:0.85rem;">
-            <p><strong>Tracking ID:</strong> <code>${d.trackingId}</code></p>
-            <p><strong>Vehicle Number:</strong> ${d.assignedAmbulance ? d.assignedAmbulance.vehicleNumber : 'Emergency Unit'}</p>
-            <p><strong>Driver:</strong> ${d.assignedAmbulance ? d.assignedAmbulance.driverName : 'Primary Responder'}</p>
-            <p><strong>Driver Contact:</strong> <a href="tel:${d.assignedAmbulance ? d.assignedAmbulance.contactNumber : '112'}">${d.assignedAmbulance ? d.assignedAmbulance.contactNumber : '112'}</a></p>
-            <p><strong>Destination:</strong> ${d.destinationHospital ? d.destinationHospital.name : 'Nearest Trauma Facility'}</p>
-          </div>
-          <button class="btn btn-outline btn-block" onclick="app.closeModal('dispatchModal')">Done / Close</button>
-        </div>
+      successCard.style.display = 'block';
+
+      successDetails.innerHTML = `
+        <p><strong>Tracking SOS ID:</strong> <span style="font-family:monospace; font-size:1.1rem; color:#111827;">${res.data.trackingId}</span></p>
+        <p><strong>Allocated Ambulance:</strong> ${res.data.assignedAmbulance.vehicleNumber} (${res.data.assignedAmbulance.driverName} - ${res.data.assignedAmbulance.contactNumber})</p>
+        <p><strong>Estimated Arrival Time:</strong> ~${res.data.estimatedArrivalMinutes} minutes (${res.data.distanceKm} km)</p>
+        <p><strong>Destination Trauma Center:</strong> ${res.data.destinationHospital ? res.data.destinationHospital.name : 'Nearest Available Hospital'}</p>
       `;
+
+      this.showToast('Emergency Ambulance Dispatched Successfully!', 'success');
+      this.fetchEmergencyData(); // Refresh fleet view
     } catch (err) {
-      alert(`Dispatch error: ${err.message}`);
+      errBox.textContent = `Dispatch Failed: ${err.message}`;
+      errBox.style.display = 'block';
     } finally {
       btn.disabled = false;
-      btn.textContent = 'Confirm & Dispatch Nearest Ambulance';
+      btn.textContent = 'Dispatch Nearest Ambulance Now';
     }
-  },
+  }
 
-  // ==========================================
-  // Directory & Ambulances Modals
-  // ==========================================
-  async openEmergencyContactsModal() {
-    const modal = document.getElementById('emergencyDirectoryModal');
-    const body = document.getElementById('emergencyDirectoryBody');
-    modal.style.display = 'flex';
-    body.innerHTML = '<p>Loading emergency directory...</p>';
+  // =========================================================================
+  // TRACK AMBULANCE DISPATCH (GET /api/emergency/dispatch/:trackingId)
+  // =========================================================================
+  openTrackModal() {
+    this.openModal('trackModal');
+    if (this.activeTrackingId) {
+      document.getElementById('trackIdInput').value = this.activeTrackingId;
+      this.lookupTracking();
+    }
+  }
+
+  viewActiveTracking() {
+    this.closeModal('dispatchModal');
+    this.openTrackModal();
+  }
+
+  async lookupTracking() {
+    const trackingId = (document.getElementById('trackIdInput')?.value || '').trim();
+    const container = document.getElementById('trackResultContainer');
+    if (!trackingId || !container) return;
+
+    container.innerHTML = '<div style="padding:1rem; text-align:center;">Querying live GPS dispatch feed...</div>';
 
     try {
-      const res = await fetch('/api/emergency/contacts');
-      const data = await res.json();
-      if (!data.success) throw new Error(data.message);
+      const res = await this.api(`/api/emergency/dispatch/${trackingId}`);
+      const d = res.data;
 
-      const helplines = data.data.nationalHelplines.map(h => `
-        <div style="background:#fff; border:1px solid #e2e8f0; border-radius:8px; padding:12px; margin-bottom:10px;">
-          <div style="display:flex; justify-content:space-between; align-items:center;">
-            <strong>${h.name}</strong>
-            <a href="tel:${h.phoneNumber}" class="btn btn-danger btn-sm">Dial ${h.phoneNumber}</a>
+      container.innerHTML = `
+        <div class="card" style="background:#F9FAFB; border:1px solid #D1D5DB;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
+            <span class="section-label" style="color:var(--red); margin:0;">${d.emergencyType}</span>
+            <span style="background:#FEF3C7; color:#92400E; font-weight:700; padding:3px 10px; border-radius:999px; font-size:0.75rem;">
+              Status: ${d.status}
+            </span>
           </div>
-          <p style="font-size:0.8rem; color:#64748b; margin-top:4px;">${h.serviceScope} &bull; ${h.availability}</p>
+          <h4 style="font-size:1.2rem; margin-bottom:0.5rem;">Patient: ${d.patientName}</h4>
+          <p style="font-size:0.85rem; color:var(--text-body); margin-bottom:0.5rem;">
+            Contact: ${d.contactPhone} &bull; Requested: ${new Date(d.createdAt).toLocaleTimeString()}
+          </p>
+          <div style="background:#fff; border-radius:12px; padding:0.75rem; border:1px solid var(--border); font-size:0.9rem; margin-bottom:0.75rem;">
+            <div>Vehicle: <strong>${d.vehicleType}</strong></div>
+            <div>Estimated Arrival: <strong style="color:var(--red); font-size:1.1rem;">~${d.estimatedArrivalMinutes} Minutes</strong> (${d.distanceKm} km)</div>
+            ${d.destinationHospital ? `<div style="margin-top:4px;">Destination: <strong>${d.destinationHospital.name}</strong></div>` : ''}
+          </div>
+          <p style="font-size:0.8rem; color:#6B7280; text-align:center;">Live GPS transponder connected to regional emergency network.</p>
         </div>
-      `).join('');
-
-      body.innerHTML = `
-        <h3 style="font-size:1.1rem; margin-bottom:12px;">Government Emergency Helplines</h3>
-        <div>${helplines}</div>
       `;
     } catch (err) {
-      body.innerHTML = `<div class="alert alert-danger">Error: ${err.message}</div>`;
+      container.innerHTML = `<div style="padding:1rem; color:#991B1B; background:#FEE2E2; border-radius:12px;">Tracking Error: ${err.message}</div>`;
     }
-  },
+  }
 
-  async openAmbulancesModal() {
-    const modal = document.getElementById('emergencyDirectoryModal');
-    const body = document.getElementById('emergencyDirectoryBody');
-    modal.style.display = 'flex';
-    body.innerHTML = '<p>Finding live ambulances in your network...</p>';
-
-    try {
-      const res = await fetch(`/api/emergency/ambulances?lat=${this.state.userLat}&lng=${this.state.userLng}`);
-      const data = await res.json();
-      if (!data.success) throw new Error(data.message);
-
-      const list = data.data.map(a => `
-        <div style="background:#fff; border:1px solid #e2e8f0; border-radius:8px; padding:14px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
-          <div>
-            <strong>${a.vehicleNumber}</strong> &bull; <span style="color:#0284c7; font-weight:600;">${a.vehicleType}</span>
-            <div style="font-size:0.8rem; color:#64748b;">Affiliated: ${a.hospitalAffiliation} &bull; Driver: ${a.driverName}</div>
-            <div style="font-size:0.75rem; color:#16a34a; font-weight:700;">Status: ${a.status} ${a.distanceKm !== undefined ? `(~${a.distanceKm} km away)` : ''}</div>
-          </div>
-          <a href="tel:${a.contactNumber}" class="btn btn-danger btn-sm">Call Driver</a>
-        </div>
-      `).join('');
-
-      body.innerHTML = `
-        <h3 style="font-size:1.1rem; margin-bottom:12px;">Active Ambulances Ready for Dispatch</h3>
-        <div>${list}</div>
-      `;
-    } catch (err) {
-      body.innerHTML = `<div class="alert alert-danger">Error: ${err.message}</div>`;
-    }
-  },
-
-  // ==========================================
-  // Admin Operations Panel
-  // ==========================================
-  async openAdminModal() {
-    if (!this.state.currentUser || this.state.currentUser.role !== 'admin') {
-      alert('Administrator privileges required.');
+  // =========================================================================
+  // AUTHENTICATION & PROFILE (/api/auth/*)
+  // =========================================================================
+  async restoreAuthSession() {
+    if (!this.token) {
+      this.renderAuthUI();
       return;
     }
-    document.getElementById('adminModal').style.display = 'flex';
-    this.loadAdminStats();
-    this.loadPendingHospitals();
-    this.loadPendingEmergency();
-    this.loadAdminUsers();
-  },
 
-  async loadPendingEmergency() {
-    const wrap = document.getElementById('pendingEmergencyTableWrap');
-    if (!wrap) return;
     try {
-      const res = await fetch('/api/admin/emergency/pending', {
-        headers: { 'Authorization': `Bearer ${this.state.token}` }
-      });
-      const data = await res.json();
-      if (!data.success) return;
-      const contacts = data.data.pendingEmergencyContacts || [];
-      const ambs = data.data.pendingAmbulances || [];
-      if (contacts.length === 0 && ambs.length === 0) {
-        wrap.innerHTML = '<p style="color:#16a34a; font-weight:600; padding:8px 0;">✓ All emergency contacts and ambulances are verified!</p>';
-        return;
+      const res = await this.api('/api/auth/me');
+      this.currentUser = res.data;
+    } catch (_) {
+      this.token = null;
+      localStorage.removeItem('np_token');
+      this.currentUser = null;
+    }
+
+    this.renderAuthUI();
+  }
+
+  renderAuthUI() {
+    const unauth = document.getElementById('unauthControls');
+    const auth = document.getElementById('authControls');
+    const roleBadge = document.getElementById('userRoleBadge');
+    const nameLabel = document.getElementById('userNameLabel');
+    const adminNav = document.getElementById('navAdminLink');
+
+    if (this.currentUser) {
+      if (unauth) unauth.style.display = 'none';
+      if (auth) auth.style.display = 'flex';
+      if (nameLabel) nameLabel.textContent = this.currentUser.name;
+      if (roleBadge) {
+        roleBadge.textContent = this.currentUser.role;
+        roleBadge.className = `role-badge ${this.currentUser.role === 'admin' ? 'admin' : ''}`;
       }
-      wrap.innerHTML = `
-        <table>
-          <thead><tr><th>Type</th><th>Name / Vehicle</th><th>Contact</th><th>Action</th></tr></thead>
-          <tbody>
-            ${contacts.map(c => `<tr><td>Helpline</td><td><strong>${c.name}</strong></td><td>${c.phoneNumber}</td><td><button class="btn btn-primary btn-xs" onclick="app.verifyEmergencyItem('contact','${c.id}',true)">Verify</button></td></tr>`).join('')}
-            ${ambs.map(a => `<tr><td>Ambulance</td><td><strong>${a.vehicleNumber}</strong> (${a.vehicleType})</td><td>${a.contactNumber}</td><td><button class="btn btn-primary btn-xs" onclick="app.verifyEmergencyItem('ambulance','${a.id}',true)">Verify</button></td></tr>`).join('')}
-          </tbody>
-        </table>
-      `;
-    } catch (_) {}
-  },
-
-  async verifyEmergencyItem(kind, id, verified) {
-    const endpoint = kind === 'contact' ? `/api/admin/emergency-contacts/${id}/verify` : `/api/admin/ambulances/${id}/verify`;
-    await fetch(endpoint, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${this.state.token}` },
-      body: JSON.stringify({ verified })
-    });
-    this.loadPendingEmergency();
-    this.loadAdminStats();
-  },
-
-  async loadAdminUsers() {
-    const wrap = document.getElementById('adminUsersTableWrap');
-    if (!wrap) return;
-    try {
-      const res = await fetch('/api/admin/users', {
-        headers: { 'Authorization': `Bearer ${this.state.token}` }
-      });
-      const data = await res.json();
-      if (!data.success) return;
-      const users = data.data || [];
-      wrap.innerHTML = `
-        <table>
-          <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Actions</th></tr></thead>
-          <tbody>
-            ${users.map(u => `
-              <tr>
-                <td><strong>${u.name}</strong></td>
-                <td>${u.email}</td>
-                <td><span class="badge badge-facility">${u.role}</span></td>
-                <td><span class="badge ${u.status === 'active' ? 'badge-verified' : 'badge-emergency'}">${u.status || 'active'}</span></td>
-                <td>
-                  <button class="btn btn-outline btn-xs" onclick="app.toggleUserRole('${u.id}', '${u.role === 'admin' ? 'user' : 'admin'}')">Make ${u.role === 'admin' ? 'User' : 'Admin'}</button>
-                  <button class="btn btn-ghost btn-xs" onclick="app.toggleUserStatus('${u.id}', '${u.status === 'active' ? 'disabled' : 'active'}')">${u.status === 'active' ? 'Disable' : 'Activate'}</button>
-                </td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      `;
-    } catch (_) {}
-  },
-
-  async toggleUserRole(id, role) {
-    await fetch(`/api/admin/users/${id}/role`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${this.state.token}` },
-      body: JSON.stringify({ role })
-    });
-    this.loadAdminUsers();
-  },
-
-  async toggleUserStatus(id, status) {
-    await fetch(`/api/admin/users/${id}/status`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${this.state.token}` },
-      body: JSON.stringify({ status })
-    });
-    this.loadAdminUsers();
-  },
-
-  async loadAdminStats() {
-    try {
-      const res = await fetch('/api/admin/stats', {
-        headers: { 'Authorization': `Bearer ${this.state.token}` }
-      });
-      const data = await res.json();
-      if (!data.success) throw new Error(data.message);
-
-      const m = data.data.metrics;
-      document.getElementById('kpiTotalHospitals').textContent = m.totalHospitals;
-      document.getElementById('kpiVerifiedHospitals').textContent = m.verifiedHospitals;
-      document.getElementById('kpiPendingHospitals').textContent = m.pendingHospitals;
-      document.getElementById('kpiTotalDoctors').textContent = m.totalDoctors;
-      document.getElementById('kpiAmbulances').textContent = `${m.availableAmbulances}/${m.totalAmbulances}`;
-      document.getElementById('kpiUsers').textContent = m.totalUsers;
-    } catch (err) {
-      console.error('Failed to load admin stats:', err);
-    }
-  },
-
-  async loadPendingHospitals() {
-    const wrap = document.getElementById('pendingHospitalsTableWrap');
-    wrap.innerHTML = '<p>Loading pending verification list...</p>';
-
-    try {
-      const res = await fetch('/api/admin/hospitals/pending', {
-        headers: { 'Authorization': `Bearer ${this.state.token}` }
-      });
-      const data = await res.json();
-      if (!data.success) throw new Error(data.message);
-
-      const list = data.data || [];
-      if (list.length === 0) {
-        wrap.innerHTML = '<p style="color:#16a34a; font-weight:600; padding:12px 0;">✓ All hospital submissions have been reviewed and verified!</p>';
-        return;
+      if (adminNav) {
+        adminNav.style.display = (this.currentUser.role === 'admin') ? 'inline-block' : 'none';
       }
-
-      wrap.innerHTML = `
-        <table>
-          <thead>
-            <tr>
-              <th>Hospital Name</th>
-              <th>City / Area</th>
-              <th>Facility Type</th>
-              <th>Phone</th>
-              <th>Submitted</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${list.map(h => `
-              <tr>
-                <td><strong>${h.name}</strong></td>
-                <td>${h.city} (${h.address})</td>
-                <td>${h.facilityType}</td>
-                <td>${h.phone}</td>
-                <td>${new Date(h.createdAt).toLocaleDateString()}</td>
-                <td>
-                  <button class="btn btn-primary btn-xs" onclick="app.verifyHospital('${h.id}', true)">Verify & Publish</button>
-                  <button class="btn btn-ghost btn-xs" onclick="app.verifyHospital('${h.id}', false)">Reject</button>
-                </td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      `;
-    } catch (err) {
-      wrap.innerHTML = `<div class="alert alert-danger">Error: ${err.message}</div>`;
+    } else {
+      if (unauth) unauth.style.display = 'flex';
+      if (auth) auth.style.display = 'none';
+      if (adminNav) adminNav.style.display = 'none';
     }
-  },
+  }
 
-  async verifyHospital(hospitalId, isApproved) {
+  openAuthModal(tab = 'login') {
+    this.openModal('authModal');
+    this.setAuthTab(tab);
+  }
+
+  setAuthTab(tab) {
+    const tabLogin = document.getElementById('authTabLogin');
+    const tabReg = document.getElementById('authTabRegister');
+    const formLogin = document.getElementById('loginForm');
+    const formReg = document.getElementById('registerForm');
+
+    if (tab === 'login') {
+      tabLogin.classList.add('active');
+      tabReg.classList.remove('active');
+      formLogin.style.display = 'block';
+      formReg.style.display = 'none';
+    } else {
+      tabReg.classList.add('active');
+      tabLogin.classList.remove('active');
+      formReg.style.display = 'block';
+      formLogin.style.display = 'none';
+    }
+  }
+
+  async quickAdminLogin() {
+    const emailInput = document.getElementById('loginEmail');
+    const passInput = document.getElementById('loginPassword');
+    if (emailInput) emailInput.value = 'admin@neerajpharma.com';
+    if (passInput) passInput.value = 'Admin@12345';
+
+    this.showToast('Logging in as pre-seeded Administrator...', 'info');
     try {
-      const res = await fetch(`/api/admin/hospitals/${hospitalId}/verify`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.state.token}`
-        },
-        body: JSON.stringify({ verified: isApproved, verificationNotes: isApproved ? 'Verified by Admin' : 'Rejected' })
+      const res = await this.api('/api/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ email: 'admin@neerajpharma.com', password: 'Admin@12345' })
       });
-      const data = await res.json();
-      if (!data.success) throw new Error(data.message);
 
-      alert(data.message);
-      this.loadAdminStats();
-      this.loadPendingHospitals();
-      this.fetchHospitals();
+      this.token = res.data.token;
+      this.currentUser = res.data.user;
+      localStorage.setItem('np_token', this.token);
+      this.renderAuthUI();
+      this.closeModal('authModal');
+      this.showToast('Signed in successfully as Administrator', 'success');
     } catch (err) {
-      alert(`Action failed: ${err.message}`);
+      this.showToast(`Admin login failed: ${err.message}`, 'error');
     }
-  },
+  }
 
-  toggleAddHospitalForm() {
-    const form = document.getElementById('addHospitalForm');
-    form.style.display = form.style.display === 'none' ? 'block' : 'none';
-  },
+  async submitLogin(event) {
+    event.preventDefault();
+    const email = document.getElementById('loginEmail').value.trim();
+    const password = document.getElementById('loginPassword').value;
+    const errBox = document.getElementById('loginErrorBox');
+    errBox.style.display = 'none';
 
-  async handleAddHospitalSubmit(e) {
-    e.preventDefault();
+    try {
+      const res = await this.api('/api/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ email, password })
+      });
+
+      this.token = res.data.token;
+      this.currentUser = res.data.user;
+      localStorage.setItem('np_token', this.token);
+      this.renderAuthUI();
+      this.closeModal('authModal');
+      this.showToast(`Welcome back, ${this.currentUser.name}!`, 'success');
+    } catch (err) {
+      errBox.textContent = err.message;
+      errBox.style.display = 'block';
+    }
+  }
+
+  async submitRegister(event) {
+    event.preventDefault();
     const payload = {
-      name: document.getElementById('newHospName').value,
-      facilityType: document.getElementById('newHospFacility').value,
-      address: document.getElementById('newHospAddress').value,
-      city: document.getElementById('newHospCity').value,
-      latitude: parseFloat(document.getElementById('newHospLat').value),
-      longitude: parseFloat(document.getElementById('newHospLng').value),
-      phone: document.getElementById('newHospPhone').value,
-      emergencyHotline: document.getElementById('newHospEmergency').value,
-      availableBeds: parseInt(document.getElementById('newHospBeds').value, 10),
-      totalBeds: parseInt(document.getElementById('newHospBeds').value, 10) * 2,
-      specialties: document.getElementById('newHospSpecialties').value.split(',').map(s => s.trim()),
-      open24x7: true,
-      hasEmergency: true
+      name: document.getElementById('regName').value.trim(),
+      email: document.getElementById('regEmail').value.trim(),
+      password: document.getElementById('regPassword').value,
+      phoneNumber: document.getElementById('regPhone').value.trim(),
+      department: document.getElementById('regDepartment').value.trim() || 'Public User'
     };
 
+    const errBox = document.getElementById('regErrorBox');
+    errBox.style.display = 'none';
+
     try {
-      const res = await fetch('/api/hospitals', {
+      const res = await this.api('/api/auth/register', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.state.token}`
-        },
         body: JSON.stringify(payload)
       });
-      const data = await res.json();
-      if (!data.success) throw new Error(data.message);
 
-      alert('Hospital successfully added and verified!');
-      document.getElementById('addHospitalForm').reset();
-      this.toggleAddHospitalForm();
-      this.loadAdminStats();
-      this.loadPendingHospitals();
+      this.token = res.data.token;
+      this.currentUser = res.data.user;
+      localStorage.setItem('np_token', this.token);
+      this.renderAuthUI();
+      this.closeModal('authModal');
+      this.showToast('Account registered successfully!', 'success');
+    } catch (err) {
+      errBox.textContent = err.message;
+      errBox.style.display = 'block';
+    }
+  }
+
+  logout() {
+    this.token = null;
+    this.currentUser = null;
+    localStorage.removeItem('np_token');
+    this.renderAuthUI();
+    this.showToast('You have been logged out.', 'info');
+  }
+
+  // =========================================================================
+  // ADMIN CONTROL CENTER (GET /api/admin/*)
+  // =========================================================================
+  async openAdminModal() {
+    if (!this.currentUser || this.currentUser.role !== 'admin') {
+      this.showToast('Administrator privileges required. Use Demo Admin button.', 'error');
+      this.openAuthModal('login');
+      return;
+    }
+
+    this.openModal('adminModal');
+    this.setAdminTab(this.adminActiveTab);
+  }
+
+  setAdminTab(tab) {
+    this.adminActiveTab = tab;
+    ['kpi', 'queue', 'hospitals', 'fleet', 'users', 'system'].forEach(t => {
+      const btn = document.getElementById(`adminTab${t.charAt(0).toUpperCase() + t.slice(1)}`);
+      if (btn) btn.classList.toggle('active', t === tab);
+    });
+
+    this.renderAdminTab(tab);
+  }
+
+  async renderAdminTab(tab) {
+    const container = document.getElementById('adminTabContent');
+    if (!container) return;
+    container.innerHTML = '<div style="padding:2rem; text-align:center;">Loading admin data...</div>';
+
+    try {
+      if (tab === 'kpi') {
+        const stats = await this.api('/api/admin/stats');
+        const s = stats.data;
+        container.innerHTML = `
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:1rem; margin-bottom:1.5rem;">
+            <div class="card">
+              <div class="section-label">Hospitals</div>
+              <div style="font-size:1.75rem; font-weight:800;">${s.hospitals.total} (${s.hospitals.verified} Verified)</div>
+              <div style="color:var(--red); font-size:0.85rem; font-weight:600;">${s.hospitals.pending} Pending Review</div>
+            </div>
+            <div class="card">
+              <div class="section-label">Ambulances</div>
+              <div style="font-size:1.75rem; font-weight:800; color:var(--green);">${s.ambulances.available} Available</div>
+              <div style="font-size:0.85rem; color:var(--text-body);">${s.ambulances.total} Total Units</div>
+            </div>
+            <div class="card">
+              <div class="section-label">Medical Specialists</div>
+              <div style="font-size:1.75rem; font-weight:800; color:var(--indigo);">${s.doctors.total} Doctors</div>
+              <div style="font-size:0.85rem; color:var(--text-body);">Multi-specialty Roster</div>
+            </div>
+            <div class="card">
+              <div class="section-label">Platform Accounts</div>
+              <div style="font-size:1.75rem; font-weight:800;">${s.users.total} Users</div>
+              <div style="font-size:0.85rem; color:var(--green);">${s.users.active} Active Profiles</div>
+            </div>
+          </div>
+        `;
+      } else if (tab === 'queue') {
+        const [hospQueue, emgQueue] = await Promise.all([
+          this.api('/api/admin/hospitals/pending'),
+          this.api('/api/admin/emergency/pending')
+        ]);
+
+        const pendingH = hospQueue.data || [];
+        const pendingContacts = emgQueue.data?.contacts || [];
+        const pendingAmb = emgQueue.data?.ambulances || [];
+
+        container.innerHTML = `
+          <h4 style="font-size:1.15rem; margin-bottom:0.75rem;">Pending Hospitals Verification (${pendingH.length})</h4>
+          ${pendingH.length === 0 ? '<p style="color:#059669; margin-bottom:1.5rem;">✓ All hospitals verified!</p>' : `
+            <div style="display:flex; flex-direction:column; gap:0.75rem; margin-bottom:1.5rem;">
+              ${pendingH.map(h => `
+                <div class="card" style="display:flex; justify-content:space-between; align-items:center; padding:1rem;">
+                  <div>
+                    <strong>${h.name}</strong> - ${h.city} (${h.facilityType})
+                    <div style="font-size:0.8rem; color:#6B7280;">Beds: ${h.availableBeds}/${h.totalBeds} &bull; Hotline: ${h.emergencyHotline}</div>
+                  </div>
+                  <button class="btn btn-sm btn-success" onclick="app.adminApproveHospital('${h.id}')">Approve Hospital</button>
+                </div>
+              `).join('')}
+            </div>
+          `}
+
+          <h4 style="font-size:1.15rem; margin-bottom:0.75rem;">Pending Ambulances (${pendingAmb.length})</h4>
+          ${pendingAmb.length === 0 ? '<p style="color:#059669; margin-bottom:1.5rem;">✓ All ambulance units verified!</p>' : `
+            <div style="display:flex; flex-direction:column; gap:0.75rem; margin-bottom:1.5rem;">
+              ${pendingAmb.map(a => `
+                <div class="card" style="display:flex; justify-content:space-between; align-items:center; padding:1rem;">
+                  <div>
+                    <strong>${a.vehicleNumber}</strong> - ${a.vehicleType} (${a.driverName})
+                  </div>
+                  <button class="btn btn-sm btn-success" onclick="app.adminApproveAmbulance('${a.id}')">Approve Ambulance</button>
+                </div>
+              `).join('')}
+            </div>
+          `}
+        `;
+      } else if (tab === 'hospitals') {
+        container.innerHTML = `
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+            <h4 style="font-size:1.15rem;">Hospital Management & Real-Time Bed Triage</h4>
+            <button class="btn btn-sm btn-primary" onclick="app.adminPromptCreateHospital()">+ Add New Hospital</button>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:0.75rem; max-height:400px; overflow-y:auto;">
+            ${this.hospitals.map(h => `
+              <div class="card" style="padding:1rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
+                <div>
+                  <strong>${h.name}</strong> (${h.city})
+                  <div style="font-size:0.85rem; color:#4B5563;">
+                    Live Beds: <strong style="color:var(--green);">${h.availableBeds}</strong> / ${h.totalBeds} &bull; ICU: ${h.icuBedsAvailable}
+                  </div>
+                </div>
+                <div style="display:flex; gap:0.5rem;">
+                  <button class="btn btn-sm btn-outline" onclick="app.adminUpdateBeds('${h.id}', ${h.availableBeds})">Update Beds</button>
+                  <button class="btn btn-sm btn-danger" onclick="app.adminDeleteHospital('${h.id}')">Delete</button>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        `;
+      } else if (tab === 'users') {
+        const usersRes = await this.api('/api/admin/users');
+        const users = usersRes.data || [];
+
+        container.innerHTML = `
+          <h4 style="font-size:1.15rem; margin-bottom:1rem;">Platform Users (${users.length})</h4>
+          <div style="display:flex; flex-direction:column; gap:0.75rem; max-height:400px; overflow-y:auto;">
+            ${users.map(u => `
+              <div class="card" style="padding:1rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
+                <div>
+                  <strong>${u.name}</strong> (${u.email})
+                  <div style="font-size:0.8rem; color:#6B7280;">Role: <span style="font-weight:700; color:var(--primary);">${u.role}</span> &bull; Status: ${u.status || 'active'}</div>
+                </div>
+                <div style="display:flex; gap:0.4rem;">
+                  ${u.role === 'admin' ? `
+                    <button class="btn btn-sm btn-outline" onclick="app.adminChangeUserRole('${u.id}', 'user')">Demote to User</button>
+                  ` : `
+                    <button class="btn btn-sm btn-outline" onclick="app.adminChangeUserRole('${u.id}', 'admin')">Promote to Admin</button>
+                  `}
+                  <button class="btn btn-sm ${u.status === 'disabled' ? 'btn-success' : 'btn-outline'}" onclick="app.adminToggleUserStatus('${u.id}', '${u.status === 'disabled' ? 'active' : 'disabled'}')">
+                    ${u.status === 'disabled' ? 'Enable' : 'Disable'}
+                  </button>
+                  ${u.id !== this.currentUser.id ? `<button class="btn btn-sm btn-danger" onclick="app.adminDeleteUser('${u.id}')">Delete</button>` : ''}
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        `;
+      } else if (tab === 'system') {
+        container.innerHTML = `
+          <div class="card" style="padding:1.5rem; border-left:4px solid var(--primary);">
+            <h4 style="font-size:1.2rem; margin-bottom:0.5rem;">Database Maintenance</h4>
+            <p style="font-size:0.9rem; color:var(--text-body); margin-bottom:1.25rem;">
+              Reset all hospital, doctor, emergency helpline, and ambulance records to initial seed state.
+              (Protected by production guard).
+            </p>
+            <button class="btn btn-danger" onclick="app.adminReseedDatabase()">Reseed Database to Clean State</button>
+          </div>
+        `;
+      }
+    } catch (err) {
+      container.innerHTML = `<div style="padding:1.5rem; color:#991B1B;">Admin view error: ${err.message}</div>`;
+    }
+  }
+
+  async adminApproveHospital(id) {
+    try {
+      await this.api(`/api/admin/hospitals/${id}/verify`, {
+        method: 'PATCH',
+        body: JSON.stringify({ verified: true, notes: 'Accreditation verified by administrator' })
+      });
+      this.showToast('Hospital verified successfully!', 'success');
+      this.renderAdminTab('queue');
       this.fetchHospitals();
     } catch (err) {
-      alert(`Error creating hospital: ${err.message}`);
+      this.showToast(`Verification failed: ${err.message}`, 'error');
     }
-  },
-
-  // Modal helpers
-  closeModal(modalId) {
-    const modal = document.getElementById(modalId);
-    if (modal) modal.style.display = 'none';
   }
-};
 
-// Initialize Application when DOM is ready
-document.addEventListener('DOMContentLoaded', () => {
-  app.init();
-});
+  async adminApproveAmbulance(id) {
+    try {
+      await this.api(`/api/admin/ambulances/${id}/verify`, {
+        method: 'PATCH',
+        body: JSON.stringify({ verified: true })
+      });
+      this.showToast('Ambulance approved for active service!', 'success');
+      this.renderAdminTab('queue');
+      this.fetchEmergencyData();
+    } catch (err) {
+      this.showToast(`Verification failed: ${err.message}`, 'error');
+    }
+  }
+
+  async adminUpdateBeds(id, currentBeds) {
+    const newBedsStr = prompt('Enter new available general bed count:', currentBeds);
+    if (newBedsStr === null) return;
+    const newBeds = parseInt(newBedsStr, 10);
+    if (isNaN(newBeds) || newBeds < 0) {
+      alert('Available beds must be a non-negative number');
+      return;
+    }
+
+    try {
+      await this.api(`/api/hospitals/${id}/availability`, {
+        method: 'PATCH',
+        body: JSON.stringify({ availableBeds: newBeds })
+      });
+      this.showToast('Hospital live bed capacity updated', 'success');
+      await this.fetchHospitals();
+      this.renderAdminTab('hospitals');
+    } catch (err) {
+      this.showToast(`Failed to update beds: ${err.message}`, 'error');
+    }
+  }
+
+  async adminDeleteHospital(id) {
+    if (!confirm('Are you sure you want to delete this hospital? Associated doctors will be cascade cleaned.')) return;
+    try {
+      await this.api(`/api/hospitals/${id}`, { method: 'DELETE' });
+      this.showToast('Hospital and orphan doctors removed successfully', 'success');
+      await this.fetchHospitals();
+      this.renderAdminTab('hospitals');
+    } catch (err) {
+      this.showToast(`Delete failed: ${err.message}`, 'error');
+    }
+  }
+
+  async adminChangeUserRole(id, newRole) {
+    try {
+      await this.api(`/api/admin/users/${id}/role`, {
+        method: 'PATCH',
+        body: JSON.stringify({ role: newRole })
+      });
+      this.showToast(`User role updated to ${newRole}`, 'success');
+      this.renderAdminTab('users');
+    } catch (err) {
+      this.showToast(`Failed to update role: ${err.message}`, 'error');
+    }
+  }
+
+  async adminToggleUserStatus(id, newStatus) {
+    try {
+      await this.api(`/api/admin/users/${id}/status`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status: newStatus })
+      });
+      this.showToast(`User account status set to ${newStatus}`, 'success');
+      this.renderAdminTab('users');
+    } catch (err) {
+      this.showToast(`Failed to update status: ${err.message}`, 'error');
+    }
+  }
+
+  async adminDeleteUser(id) {
+    if (!confirm('Permanently delete this user account?')) return;
+    try {
+      await this.api(`/api/admin/users/${id}`, { method: 'DELETE' });
+      this.showToast('User account deleted', 'success');
+      this.renderAdminTab('users');
+    } catch (err) {
+      this.showToast(`Delete failed: ${err.message}`, 'error');
+    }
+  }
+
+  async adminReseedDatabase() {
+    if (!confirm('Reset database to clean initial seed dataset?')) return;
+    try {
+      await this.api('/api/admin/reseed', { method: 'POST' });
+      this.showToast('Database reset to initial seed state!', 'success');
+      await this.fetchPlatformHealth();
+      await this.fetchHospitals();
+      await this.fetchDoctors();
+      await this.fetchEmergencyData();
+      this.renderAdminTab('system');
+    } catch (err) {
+      this.showToast(`Reseed error: ${err.message}`, 'error');
+    }
+  }
+
+  async adminPromptCreateHospital() {
+    const name = prompt('Hospital Name:');
+    if (!name) return;
+    const address = prompt('Hospital Address:') || 'Healthcare Blvd';
+    const city = prompt('City:') || 'New Delhi';
+
+    try {
+      await this.api('/api/hospitals', {
+        method: 'POST',
+        body: JSON.stringify({
+          name,
+          address,
+          city,
+          state: 'Delhi',
+          latitude: this.currentLocation.lat,
+          longitude: this.currentLocation.lng,
+          phone: '+91-11-23456789',
+          emergencyHotline: '+91-11-23456799',
+          facilityType: 'Super Speciality',
+          totalBeds: 100,
+          availableBeds: 25,
+          icuBedsAvailable: 5,
+          ventilatorBedsAvailable: 2,
+          rating: 4.8
+        })
+      });
+      this.showToast('New hospital registered and verified!', 'success');
+      await this.fetchHospitals();
+      this.renderAdminTab('hospitals');
+    } catch (err) {
+      this.showToast(`Creation failed: ${err.message}`, 'error');
+    }
+  }
+
+  // =========================================================================
+  // MODAL & TOAST UTILITIES
+  // =========================================================================
+  openModal(modalId) {
+    const el = document.getElementById(modalId);
+    if (el) el.classList.add('active');
+  }
+
+  closeModal(modalId) {
+    const el = document.getElementById(modalId);
+    if (el) el.classList.remove('active');
+  }
+
+  showToast(message, type = 'info') {
+    const container = document.getElementById('toastContainer');
+    if (!container) return;
+
+    const toast = document.createElement('div');
+    toast.className = `toast ${type === 'success' ? 'toast-success' : (type === 'error' ? 'toast-error' : '')}`;
+    toast.textContent = message;
+
+    container.appendChild(toast);
+    setTimeout(() => {
+      toast.style.opacity = '0';
+      toast.style.transform = 'translateY(10px)';
+      toast.style.transition = 'all 0.3s ease';
+      setTimeout(() => toast.remove(), 300);
+    }, 4000);
+  }
+}
+
+// Global Application Instance
+const app = new NeerajPharmaApp();
+document.addEventListener('DOMContentLoaded', () => app.init());

@@ -280,8 +280,14 @@ function validateUserRegister(data) {
   if (!body.email || !isValidEmail(String(body.email))) {
     errors.push('A valid email address is required');
   }
-  if (!body.password || typeof body.password !== 'string' || body.password.length < 6) {
-    errors.push('Password must be at least 6 characters long');
+  if (
+    !body.password ||
+    typeof body.password !== 'string' ||
+    body.password.length < 8 ||
+    !/[a-zA-Z]/.test(body.password) ||
+    !/[0-9]/.test(body.password)
+  ) {
+    errors.push('Password must be at least 8 characters long and contain both letters and numbers');
   }
   if (body.phoneNumber !== undefined && body.phoneNumber !== '' && !isValidPhone(body.phoneNumber)) {
     errors.push('phoneNumber must be a valid phone number');

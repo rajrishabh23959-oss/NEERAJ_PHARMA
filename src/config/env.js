@@ -11,7 +11,7 @@ const runtimeSecret = process.env.JWT_SECRET || crypto.randomBytes(32).toString(
 module.exports = {
   PORT: parseInt(process.env.PORT || '5000', 10),
   NODE_ENV: process.env.NODE_ENV || 'development',
-  DB_DIALECT: process.env.DB_DIALECT || 'mongodb',
+  DB_DIALECT: process.env.DB_DIALECT || 'embedded',
   MONGODB_URI: process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/neeraj_pharma_healthcare',
   DATABASE_URL: process.env.DATABASE_URL || 'postgresql://postgres:postgres@127.0.0.1:5432/neeraj_pharma_healthcare',
   DB_FILE: path.resolve(process.cwd(), process.env.DB_FILE || './data/hospital_locator_db.json'),

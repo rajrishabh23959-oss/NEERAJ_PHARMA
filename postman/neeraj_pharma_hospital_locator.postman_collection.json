@@ -2201,11 +2201,15 @@
                   "pm.test('Get Single User by ID (GET /api/admin/users/:id) - Status code is 200', function () {",
                   "    pm.response.to.have.status(200);",
                   "});",
-                  "pm.test('Response is valid JSON with expected structure', function () {",
+                  "pm.test('Response is valid JSON with user object fields', function () {",
                   "    pm.response.to.be.json;",
                   "    const jsonData = pm.response.json();",
                   "    pm.expect(jsonData.success).to.eql(true);",
-                  "    pm.expect(jsonData).to.have.property('message');",
+                  "    pm.expect(jsonData.data).to.have.property('id');",
+                  "    pm.expect(jsonData.data).to.have.property('name');",
+                  "    pm.expect(jsonData.data).to.have.property('email');",
+                  "    pm.expect(jsonData.data).to.have.property('role');",
+                  "    pm.expect(jsonData.data).to.not.have.property('passwordHash');",
                   "});"
                 ]
               }
@@ -2245,11 +2249,12 @@
                   "pm.test('Edit User Details (PUT /api/admin/users/:id) - Status code is 200', function () {",
                   "    pm.response.to.have.status(200);",
                   "});",
-                  "pm.test('Response is valid JSON with expected structure', function () {",
+                  "pm.test('Response confirms updated user profile fields', function () {",
                   "    pm.response.to.be.json;",
                   "    const jsonData = pm.response.json();",
                   "    pm.expect(jsonData.success).to.eql(true);",
-                  "    pm.expect(jsonData).to.have.property('message');",
+                  "    pm.expect(jsonData.data.name).to.eql('Dr. Vikas Mehra (Senior Coordinator)');",
+                  "    pm.expect(jsonData.data.department).to.eql('Regional Emergency Command');",
                   "});"
                 ]
               }
@@ -2297,11 +2302,11 @@
                   "pm.test('Change User Role (PATCH /api/admin/users/:id/role) - Status code is 200', function () {",
                   "    pm.response.to.have.status(200);",
                   "});",
-                  "pm.test('Response is valid JSON with expected structure', function () {",
+                  "pm.test('Response confirms role updated', function () {",
                   "    pm.response.to.be.json;",
                   "    const jsonData = pm.response.json();",
                   "    pm.expect(jsonData.success).to.eql(true);",
-                  "    pm.expect(jsonData).to.have.property('message');",
+                  "    pm.expect(jsonData.data.role).to.eql('user');",
                   "});"
                 ]
               }
@@ -2350,11 +2355,12 @@
                   "pm.test('Update User Account Status Enable/Disable (PATCH /api/admin/users/:id/status) - Status code is 200', function () {",
                   "    pm.response.to.have.status(200);",
                   "});",
-                  "pm.test('Response is valid JSON with expected structure', function () {",
+                  "pm.test('Response confirms status updated', function () {",
                   "    pm.response.to.be.json;",
                   "    const jsonData = pm.response.json();",
                   "    pm.expect(jsonData.success).to.eql(true);",
-                  "    pm.expect(jsonData).to.have.property('message');",
+                  "    pm.expect(jsonData.data).to.have.property('status');",
+                  "    pm.expect(['active', 'disabled', 'suspended']).to.include(jsonData.data.status);",
                   "});"
                 ]
               }
@@ -3036,6 +3042,200 @@
               ]
             },
             "description": "GET {{baseUrl}}/api/hospitals/hosp_non_existent_999"
+          }
+        },
+        {
+          "name": "Reject User Role Update with Invalid Role (400 Bad Request)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Reject User Role Update with Invalid Role (400 Bad Request) - Status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test('Response is valid JSON with error message', function () {",
+                  "    pm.response.to.be.json;",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(false);",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/users/usr_staff_001/role",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "users",
+                "usr_staff_001",
+                "role"
+              ]
+            },
+            "description": "PATCH {{baseUrl}}/api/admin/users/usr_staff_001/role",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"superuser\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Reject User Status Update with Invalid Status (400 Bad Request)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Reject User Status Update with Invalid Status (400 Bad Request) - Status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test('Response is valid JSON with error message', function () {",
+                  "    pm.response.to.be.json;",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(false);",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/users/usr_staff_001/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "users",
+                "usr_staff_001",
+                "status"
+              ]
+            },
+            "description": "PATCH {{baseUrl}}/api/admin/users/usr_staff_001/status",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"invalid_status\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Reject Non-Admin User Access to Admin User Route (403 Forbidden)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Reject Non-Admin User Access to Admin User Route (403 Forbidden) - Status code is 403', function () {",
+                  "    pm.response.to.have.status(403);",
+                  "});",
+                  "pm.test('Response is valid JSON with 403 error', function () {",
+                  "    pm.response.to.be.json;",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(false);",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/users/usr_staff_001",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "users",
+                "usr_staff_001"
+              ]
+            },
+            "description": "GET {{baseUrl}}/api/admin/users/usr_staff_001"
+          }
+        },
+        {
+          "name": "Return 404 Not Found for Non-Existent User ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Return 404 Not Found for Non-Existent User ID - Status code is 404', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "pm.test('Response is valid JSON with 404 error', function () {",
+                  "    pm.response.to.be.json;",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(false);",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/users/usr_nonexistent_999",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "users",
+                "usr_nonexistent_999"
+              ]
+            },
+            "description": "GET {{baseUrl}}/api/admin/users/usr_nonexistent_999"
           }
         }
       ]

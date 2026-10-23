@@ -579,3 +579,86 @@ test('Module 7: Complete Admin User Lifecycle Management', async (t) => {
     assert.equal(res.body.data.hospitalsCount, 12);
   });
 });
+
+// ============================================================================
+// 8. REVIEWER HARDENING, SECURITY HEADERS & ORPHAN CLEANUP
+// ============================================================================
+test('Module 8: Reviewer Hardening, Security Headers, Rate Limiting & Orphan Cleanup', async (t) => {
+  const loginRes = await request('POST', '/api/auth/login', {
+    email: 'admin@neerajpharma.com',
+    password: 'Admin@12345'
+  });
+  const adminToken = loginRes.body.data.token;
+
+  await t.test('POST /api/auth/register rejects weak password 123456 with 400 Bad Request', async () => {
+    const res = await request('POST', '/api/auth/register', {
+      name: 'Weak Password User',
+      email: `weakpass_${Date.now()}@example.com`,
+      password: '123456'
+    });
+    assert.equal(res.statusCode, 400);
+    assert.equal(res.body.success, false);
+    assert.ok(res.body.errors.some(e => e.includes('8 characters') || e.includes('letters and numbers')));
+  });
+
+  await t.test('Security Headers: X-Powered-By is hidden and X-Content-Type-Options nosniff is set', async () => {
+    const res = await request('GET', '/api/health');
+    assert.equal(res.statusCode, 200);
+    assert.equal(res.headers['x-powered-by'], undefined);
+    assert.equal(res.headers['x-content-type-options'], 'nosniff');
+    assert.equal(res.headers['x-frame-options'], 'DENY');
+  });
+
+  await t.test('Orphan Cleanup: DELETE /api/hospitals/:id cascades and deletes all associated doctors', async () => {
+    // Hosp_001 has affiliated doctors initially
+    const doctorsBefore = await request('GET', '/api/doctors?hospitalId=hosp_001');
+    assert.equal(doctorsBefore.statusCode, 200);
+    assert.ok(doctorsBefore.body.data.length > 0);
+
+    const deleteRes = await request('DELETE', '/api/hospitals/hosp_001', null, {
+      'Authorization': `Bearer ${adminToken}`
+    });
+    assert.equal(deleteRes.statusCode, 200);
+
+    const doctorsAfter = await request('GET', '/api/doctors?hospitalId=hosp_001');
+    assert.equal(doctorsAfter.statusCode, 200);
+    assert.equal(doctorsAfter.body.data.length, 0);
+
+    // Reseed so other tests have hosp_001 if needed
+    await request('POST', '/api/admin/reseed', null, {
+      'Authorization': `Bearer ${adminToken}`
+    });
+  });
+
+  await t.test('Production Guard: POST /api/admin/reseed returns 403 Forbidden when NODE_ENV=production', async () => {
+    const oldEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = 'production';
+    try {
+      const res = await request('POST', '/api/admin/reseed', null, {
+        'Authorization': `Bearer ${adminToken}`
+      });
+      assert.equal(res.statusCode, 403);
+      assert.equal(res.body.success, false);
+      assert.equal(res.body.message, 'Database reseed is disabled in production');
+    } finally {
+      process.env.NODE_ENV = oldEnv;
+    }
+  });
+
+  await t.test('Rate Limiting: Rapid repeated login requests trigger 429 Too Many Requests', async () => {
+    let triggered429 = false;
+    for (let i = 0; i < 20; i++) {
+      const res = await request('POST', '/api/auth/login', {
+        email: 'invalid@example.com',
+        password: 'Password@123'
+      });
+      if (res.statusCode === 429) {
+        triggered429 = true;
+        assert.equal(res.body.success, false);
+        break;
+      }
+    }
+    assert.ok(triggered429, 'Expected 429 status code after exceeding request threshold');
+  });
+});
+

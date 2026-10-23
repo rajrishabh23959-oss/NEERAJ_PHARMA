@@ -3,6 +3,7 @@ const emergencyController = require('../controllers/emergencyController');
 const { authenticate, optionalAuthenticate } = require('../middleware/auth');
 const { authorizeRoles } = require('../middleware/rbac');
 const { asyncHandler } = require('../middleware/errorHandler');
+const { dispatchRateLimiter } = require('../middleware/rateLimiter');
 
 const router = express.Router();
 
@@ -19,7 +20,7 @@ router.put('/ambulances/:id', authenticate, authorizeRoles('admin'), asyncHandle
 router.delete('/ambulances/:id', authenticate, authorizeRoles('admin'), asyncHandler(emergencyController.deleteAmbulance));
 
 // Ambulance Dispatch & Live Tracking
-router.post('/dispatch', asyncHandler(emergencyController.requestAmbulance));
+router.post('/dispatch', dispatchRateLimiter, asyncHandler(emergencyController.requestAmbulance));
 router.get('/dispatch/:trackingId', asyncHandler(emergencyController.getDispatchStatus));
 
 module.exports = router;

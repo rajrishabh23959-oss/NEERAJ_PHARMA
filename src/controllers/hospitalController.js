@@ -284,8 +284,20 @@ function deleteHospital(req, res) {
     return error(res, `Hospital with ID '${id}' not found`, 404);
   }
 
+  // Prevent orphan doctors: cascade delete associated doctors
+  const associatedDoctors = db.find('doctors', d => d.hospitalId === id);
+  for (const doc of associatedDoctors) {
+    db.deleteById('doctors', doc.id);
+  }
+
+  // Prevent orphan ambulances: cleanly unassign hospital affiliation
+  const associatedAmbulances = db.find('ambulances', a => a.hospitalId === id);
+  for (const amb of associatedAmbulances) {
+    db.updateById('ambulances', amb.id, { hospitalId: null, hospitalAffiliation: 'Unassigned' });
+  }
+
   db.deleteById('hospitals', id);
-  return success(res, { id }, 'Hospital record deleted successfully');
+  return success(res, { id, cascadeDeletedDoctors: associatedDoctors.length }, 'Hospital record deleted successfully');
 }
 
 module.exports = {

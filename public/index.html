@@ -4,13 +4,18 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Neeraj Pharma - Healthcare & Emergency Hospital Locator</title>
-  <link rel="stylesheet" href="css/style.css">
-  <!-- Leaflet CSS for Interactive Geospatial Map -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  
   <!-- Google Fonts: Inter -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Leaflet CSS for Interactive Geospatial Map -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  
+  <!-- Main Application CSS -->
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 
@@ -19,12 +24,12 @@
     <div class="container emergency-bar-inner">
       <div class="emergency-tag">
         <span class="pulsing-dot" aria-hidden="true"></span>
-        <strong>24x7 MEDICAL EMERGENCY HOTLINE:</strong> Dial <strong>112</strong> (National) &bull; <strong>102</strong> (Ambulance) &bull; <strong>108</strong> (Trauma)
+        <span><strong>24x7 MEDICAL EMERGENCY HOTLINES:</strong> Dial <strong>112</strong> (National) &bull; <strong>102</strong> (Ambulance) &bull; <strong>108</strong> (Trauma/Disaster)</span>
       </div>
       <div class="quick-sos-actions">
-        <button id="btnQuickDispatch" class="btn btn-emergency-pulse" onclick="app.openDispatchModal()">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M10 17h4V5H10v12zM15 8h4v9h-4V8zM5 11h4v6H5v-6z"/><circle cx="7" cy="19" r="2"/><circle cx="17" cy="19" r="2"/></svg>
-          Request Emergency Ambulance
+        <button id="btnQuickDispatch" class="btn btn-sm btn-emergency-pulse" onclick="app.openDispatchModal()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10 17h4V5H10v12zM15 8h4v9h-4V8zM5 11h4v6H5v-6z"/><circle cx="7" cy="19" r="2"/><circle cx="17" cy="19" r="2"/></svg>
+          Instant SOS Ambulance Dispatch
         </button>
       </div>
     </div>
@@ -33,10 +38,8 @@
   <!-- Main Navigation Header -->
   <header class="main-header">
     <div class="container header-inner">
-      <div class="brand" onclick="app.resetView()">
-        <div class="brand-icon">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2v20M2 12h20"/></svg>
-        </div>
+      <div class="brand" onclick="app.showView('hospitals')">
+        <img src="logo.png" alt="Neeraj Pharma Emblem" class="brand-logo">
         <div class="brand-text">
           <span class="brand-title">Neeraj Pharma</span>
           <span class="brand-sub">Healthcare & Emergency Locator</span>
@@ -44,480 +47,527 @@
       </div>
 
       <nav class="nav-links">
-        <a href="#locator" class="nav-link active" onclick="app.setActiveTab('locator')">Find Hospitals</a>
-        <a href="#emergency" class="nav-link" onclick="app.openEmergencyContactsModal()">Emergency Desks</a>
-        <a href="#ambulances" class="nav-link" onclick="app.openAmbulancesModal()">Live Ambulances</a>
-        <a href="#admin" id="navAdminLink" class="nav-link admin-pill" style="display: none;" onclick="app.openAdminModal()">Admin Panel</a>
+        <a href="#hospitals" id="navLinkHospitals" class="nav-link active" onclick="app.showView('hospitals')">Find Hospitals</a>
+        <a href="#doctors" id="navLinkDoctors" class="nav-link" onclick="app.showView('doctors')">Doctors Directory</a>
+        <a href="#locations" id="navLinkLocations" class="nav-link" onclick="app.showView('locations')">Locations & Hubs</a>
+        <a href="#emergency" id="navLinkEmergency" class="nav-link" onclick="app.showView('emergency')">Emergency & Fleet</a>
+        <a href="#admin" id="navAdminLink" class="nav-link admin-pill" style="display: none;" onclick="app.openAdminModal()">Admin Center</a>
       </nav>
 
       <div class="auth-actions">
         <div id="unauthControls" class="auth-buttons">
-          <button class="btn btn-outline" onclick="app.openAuthModal('login')">Sign In</button>
-          <button class="btn btn-primary" onclick="app.openAuthModal('register')">Register</button>
+          <button class="btn btn-sm btn-outline" onclick="app.openAuthModal('login')">Sign In</button>
+          <button class="btn btn-sm btn-primary" onclick="app.openAuthModal('register')">Register</button>
+          <button class="btn btn-sm" style="background: var(--tint-blue); color: var(--primary);" onclick="app.quickAdminLogin()" title="1-Click Demo Admin Login">Demo Admin</button>
         </div>
         <div id="authControls" class="auth-profile" style="display: none;">
           <div class="user-chip">
             <span class="role-badge" id="userRoleBadge">User</span>
             <span class="user-name" id="userNameLabel">User Name</span>
           </div>
-          <button class="btn btn-sm btn-ghost" onclick="app.logout()">Logout</button>
+          <button class="btn btn-sm btn-outline" onclick="app.logout()">Logout</button>
         </div>
       </div>
     </div>
   </header>
 
-  <!-- Hero & Location Search Strip -->
-  <section class="search-strip-section" id="locator">
+  <!-- Hero Section -->
+  <section class="hero-section">
     <div class="container">
-      <div class="search-card">
-        <div class="search-card-header">
-          <h2>Find Emergency & Multi-Specialty Care Nearby</h2>
-          <p>Real-time geospatial distance calculation, bed availability, and verified trauma triage</p>
-        </div>
-
-        <div class="search-grid">
-          <!-- Text Search Input -->
-          <div class="form-group search-input-group">
-            <label for="searchInput">Search Hospital, Area or Specialty</label>
-            <div class="input-with-icon">
-              <svg class="input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-              <input type="text" id="searchInput" placeholder="e.g. Apex Hospital, Saket, Cardiology..." oninput="app.handleSearchInput()">
-            </div>
-          </div>
-
-          <!-- Quick City / Location Selector -->
-          <div class="form-group">
-            <label for="citySelect">Select City Hub</label>
-            <select id="citySelect" onchange="app.handleCitySelect(this.value)">
-              <option value="current">📍 Current GPS Location</option>
-              <option value="delhi" selected>Delhi NCR (Central)</option>
-              <option value="south_delhi">South Delhi (Saket / Vasant Kunj)</option>
-              <option value="gurugram">Gurugram (Sector 38 / Cyber)</option>
-              <option value="noida">Noida (Sector 18 / 27)</option>
-              <option value="mumbai">Mumbai (Central)</option>
-              <option value="chennai">Chennai (Central)</option>
-            </select>
-          </div>
-
-          <!-- Geolocation Trigger Button -->
-          <div class="form-group geo-btn-group">
-            <label>&nbsp;</label>
-            <button class="btn btn-gps" id="btnDetectGPS" onclick="app.detectUserLocation()">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
-              Use My GPS
+      <div class="hero-grid">
+        <div>
+          <span class="section-label">Verified Healthcare Platform</span>
+          <h1 class="hero-title">Immediate Healthcare Access & <span>Emergency Hospital Locator</span></h1>
+          <p class="hero-description">
+            Real-time bed availability, Haversine geospatial proximity, active ambulance dispatch, and certified trauma centers across India.
+          </p>
+          <div class="hero-cta-group">
+            <button class="btn btn-primary" onclick="app.openDispatchModal()">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 17h4V5H10v12zM15 8h4v9h-4V8zM5 11h4v6H5v-6z"/><circle cx="7" cy="19" r="2"/><circle cx="17" cy="19" r="2"/></svg>
+              Emergency Ambulance SOS
+            </button>
+            <button class="btn btn-outline" onclick="app.showView('hospitals'); app.loadSampleLocation();">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="12 8 8 12 12 16 12 8"/></svg>
+              Locate Care in New Delhi NCR
             </button>
           </div>
         </div>
 
-        <!-- Filter Chips & Distance Slider -->
-        <div class="filter-toolbar">
-          <div class="filter-slider-wrap">
-            <label for="radiusRange">Max Radius: <strong id="radiusValue">25 km</strong></label>
-            <input type="range" id="radiusRange" min="2" max="60" step="1" value="25" oninput="app.handleRadiusChange(this.value)">
+        <!-- Quick Emergency Action Card -->
+        <div class="hero-emergency-card">
+          <span class="emergency-card-badge">Instant Dispatch Available</span>
+          <h3 style="margin-bottom: 0.5rem; font-size: 1.35rem;">Need Urgent Medical Assistance?</h3>
+          <p style="font-size: 0.95rem; color: var(--text-body); margin-bottom: 1.25rem;">
+            Direct ambulance allocation to the closest available trauma care center with real-time ETA calculation.
+          </p>
+          <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+            <button class="btn btn-danger" style="flex: 1;" onclick="app.openDispatchModal()">Request Ambulance Now</button>
+            <button class="btn btn-outline" onclick="app.openTrackModal()">Track SOS</button>
           </div>
+        </div>
+      </div>
 
-          <div class="filter-dropdown-wrap">
-            <label for="facilitySelect">Facility Type</label>
-            <select id="facilitySelect" onchange="app.applyFilters()">
-              <option value="all">All Facilities</option>
-              <option value="Super Speciality">Super Speciality</option>
-              <option value="Multi-Speciality">Multi-Speciality</option>
-              <option value="Trauma">Trauma & Emergency Center</option>
-              <option value="General">General Hospital</option>
-              <option value="Pediatric">Pediatric Hospital</option>
-              <option value="Clinic">Urgent Care Clinic</option>
-            </select>
-          </div>
-
-          <div class="filter-dropdown-wrap">
-            <label for="specialtySelect">Medical Specialty</label>
-            <select id="specialtySelect" onchange="app.applyFilters()">
-              <option value="all">All Specialties</option>
-              <option value="Emergency & Trauma">Emergency & Trauma</option>
-              <option value="Cardiology">Cardiology</option>
-              <option value="Neurology">Neurology</option>
-              <option value="Orthopedics">Orthopedics</option>
-              <option value="Pediatrics">Pediatrics</option>
-              <option value="Critical Care">Critical Care / ICU</option>
-              <option value="Oncology">Oncology</option>
-              <option value="General Surgery">General Surgery</option>
-            </select>
-          </div>
-
-          <div class="toggle-checkboxes">
-            <label class="toggle-chip">
-              <input type="checkbox" id="chkOpenNow" onchange="app.applyFilters()">
-              <span>Open Now (Live)</span>
-            </label>
-            <label class="toggle-chip">
-              <input type="checkbox" id="chk247" onchange="app.applyFilters()">
-              <span>24/7 Open</span>
-            </label>
-            <label class="toggle-chip">
-              <input type="checkbox" id="chkEmergency" onchange="app.applyFilters()">
-              <span>Emergency Ready</span>
-            </label>
-            <label class="toggle-chip">
-              <input type="checkbox" id="chkICU" onchange="app.applyFilters()">
-              <span>ICU Beds Available</span>
-            </label>
-          </div>
+      <!-- Live KPI Stat Bar -->
+      <div class="hero-stats-strip">
+        <div class="stat-card">
+          <div class="stat-number" id="statHospitals">12</div>
+          <div class="stat-label">Hospitals Monitored</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number" id="statAvailableBeds" style="color: var(--green);">--</div>
+          <div class="stat-label">Live Available Beds</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number" id="statAmbulances" style="color: var(--primary);">--</div>
+          <div class="stat-label">Active Ambulances</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number" id="statDoctors" style="color: var(--indigo);">--</div>
+          <div class="stat-label">Specialists On Duty</div>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- Main Content Grid: Hospital Cards List & Interactive Map -->
-  <main class="main-content-section">
-    <div class="container layout-split">
-      <!-- Left Column: Hospital Results -->
-      <section class="results-column">
-        <div class="results-header">
-          <div>
-            <h3 id="resultsCount">Loading nearby hospitals...</h3>
-            <span class="location-reference" id="locationReferenceLabel">Coordinates: 28.6139° N, 77.2090° E</span>
+  <!-- 4 Feature Service Icon Boxes (Exact Requested Colors & Icons) -->
+  <section class="services-section">
+    <div class="container">
+      <div class="services-grid">
+        
+        <!-- Icon 1 (Symptom Checker / Facility Search): Pale blue box, Blue stroke -->
+        <div class="card service-card" onclick="app.showView('hospitals')">
+          <div class="service-icon-box icon-symptom">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
           </div>
-          <div class="sort-selector">
-            <label for="sortBySelect">Sort by:</label>
-            <select id="sortBySelect" onchange="app.handleSortChange(this.value)">
-              <option value="distance">Nearest Distance</option>
-              <option value="rating">Highest Rated</option>
-              <option value="beds">Most Available Beds</option>
+          <h4 class="service-title">Hospital & Facility Search</h4>
+          <p class="service-desc">Haversine GPS proximity locator with verified operating hours and live bed triage.</p>
+        </div>
+
+        <!-- Icon 2 (Consultations): Pale indigo box, Indigo stroke -->
+        <div class="card service-card" onclick="app.showView('doctors')">
+          <div class="service-icon-box icon-consult">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+          </div>
+          <h4 class="service-title">Specialist Consultations</h4>
+          <p class="service-desc">Browse on-duty cardiologists, neurologists, and pediatricians with real-time shift status.</p>
+        </div>
+
+        <!-- Icon 3 (Health Identity / Verified Locations): Green box, White stroke -->
+        <div class="card service-card" onclick="app.showView('locations')">
+          <div class="service-icon-box icon-identity">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><circle cx="12" cy="11" r="3"/></svg>
+          </div>
+          <h4 class="service-title">Verified Regional Hubs</h4>
+          <p class="service-desc">Explore regional trauma corridors across Delhi NCR, Gurugram, Noida, Mumbai, and Chennai.</p>
+        </div>
+
+        <!-- Icon 4 (Emergency Dispatch): Pale red box, Red stroke -->
+        <div class="card service-card" onclick="app.openDispatchModal()">
+          <div class="service-icon-box icon-emergency">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="1" y="3" width="15" height="13" rx="2"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+          </div>
+          <h4 class="service-title">Emergency SOS Dispatch</h4>
+          <p class="service-desc">Deploy nearest ALS/BLS mobile ICUs directly to your GPS coordinates with live tracking.</p>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- Main Dynamic Views Section -->
+  <main class="locator-section" id="mainViews">
+    <div class="container">
+
+      <!-- ========================================================================= -->
+      <!-- VIEW 1: HOSPITALS LOCATOR & INTERACTIVE MAP                               -->
+      <!-- ========================================================================= -->
+      <div id="viewHospitals" class="view-panel">
+        
+        <!-- Search & Filter Strip -->
+        <div class="search-strip">
+          <div class="search-bar-row">
+            <div class="search-input-wrapper">
+              <svg class="search-icon-inside" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+              <input type="text" id="searchInput" class="search-input-pill" placeholder="Search hospital name, area, specialty (e.g. Apex, Saket, Cardiology)..." oninput="app.handleSearchInput()">
+            </div>
+            <button class="btn btn-primary" onclick="app.fetchHospitals()">Search</button>
+            <button class="btn btn-outline" onclick="app.useCurrentLocation()" title="Use browser geolocation">📍 My GPS</button>
+            <button class="btn btn-outline" onclick="app.loadSampleLocation()" title="Fill pre-seeded New Delhi coordinates">Sample: New Delhi</button>
+          </div>
+
+          <div class="filters-row">
+            <div class="filters-group">
+              <select id="facilitySelect" class="select-pill" onchange="app.fetchHospitals()">
+                <option value="">All Facilities</option>
+                <option value="Super Speciality">Super Speciality</option>
+                <option value="Trauma">Trauma Center</option>
+                <option value="General Hospital">General Hospital</option>
+                <option value="Women & Child">Women & Child</option>
+              </select>
+
+              <select id="specialtySelect" class="select-pill" onchange="app.fetchHospitals()">
+                <option value="">All Specialties</option>
+                <option value="Cardiology">Cardiology</option>
+                <option value="Neurology">Neurology</option>
+                <option value="Trauma">Trauma & Emergency</option>
+                <option value="Pediatrics">Pediatrics</option>
+                <option value="Orthopedics">Orthopedics</option>
+                <option value="Oncology">Oncology</option>
+              </select>
+
+              <select id="sortBySelect" class="select-pill" onchange="app.fetchHospitals()">
+                <option value="distance">Sort by Distance</option>
+                <option value="rating">Sort by Rating</option>
+                <option value="availableBeds">Sort by Available Beds</option>
+              </select>
+            </div>
+
+            <div class="filters-group">
+              <label class="toggle-pill">
+                <input type="checkbox" id="filterOpenNow" onchange="app.fetchHospitals()">
+                <span>Open Now</span>
+              </label>
+              <label class="toggle-pill">
+                <input type="checkbox" id="filterEmergency" onchange="app.fetchHospitals()">
+                <span>Emergency 24x7</span>
+              </label>
+              <label class="toggle-pill">
+                <input type="checkbox" id="filterBeds" onchange="app.fetchHospitals()">
+                <span>Beds Available</span>
+              </label>
+              <div style="display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; font-weight: 600;">
+                <span>Radius:</span>
+                <input type="range" id="radiusInput" min="5" max="100" step="5" value="35" oninput="app.handleRadiusChange(this.value)">
+                <span id="radiusLabel" style="min-width: 48px; color: var(--primary);">35 km</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Two Column Map & Hospital Cards Layout -->
+        <div class="locator-layout">
+          <!-- Left: Interactive Leaflet Map -->
+          <div class="map-container-card">
+            <div id="hospitalMap"></div>
+          </div>
+
+          <!-- Right: Hospital Results List -->
+          <div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+              <h3 id="hospitalResultsCount" style="font-size: 1.15rem;">Loading verified hospitals...</h3>
+              <button class="btn btn-sm btn-outline" onclick="app.fetchHospitals()">Refresh Results</button>
+            </div>
+            <div class="hospital-list-pane" id="hospitalListContainer">
+              <!-- Rendered dynamically -->
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ========================================================================= -->
+      <!-- VIEW 2: DOCTORS DIRECTORY                                                -->
+      <!-- ========================================================================= -->
+      <div id="viewDoctors" class="view-panel" style="display: none;">
+        <div class="search-strip">
+          <div class="search-bar-row">
+            <div class="search-input-wrapper">
+              <svg class="search-icon-inside" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+              <input type="text" id="doctorSearchInput" class="search-input-pill" placeholder="Search doctor by name, specialty or qualification..." oninput="app.fetchDoctors()">
+            </div>
+            <select id="doctorHospitalFilter" class="select-pill" onchange="app.fetchDoctors()">
+              <option value="">All Affiliated Hospitals</option>
+            </select>
+            <label class="toggle-pill">
+              <input type="checkbox" id="doctorAvailableNow" onchange="app.fetchDoctors()">
+              <span>On Duty Now</span>
+            </label>
+            <label class="toggle-pill">
+              <input type="checkbox" id="doctorEmergencyCall" onchange="app.fetchDoctors()">
+              <span>Emergency On-Call</span>
+            </label>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.5rem;" id="doctorsGrid">
+          <!-- Rendered dynamically -->
+        </div>
+      </div>
+
+      <!-- ========================================================================= -->
+      <!-- VIEW 3: LOCATIONS DIRECTORY                                              -->
+      <!-- ========================================================================= -->
+      <div id="viewLocations" class="view-panel" style="display: none;">
+        <div style="margin-bottom: 1.5rem;">
+          <h2 class="section-heading">Geographical Healthcare Hubs</h2>
+          <p class="section-sub">Mapped emergency medical corridors and certified hospital clusters.</p>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem;" id="locationsGrid">
+          <!-- Rendered dynamically -->
+        </div>
+      </div>
+
+      <!-- ========================================================================= -->
+      <!-- VIEW 4: EMERGENCY SERVICES & FLEET                                       -->
+      <!-- ========================================================================= -->
+      <div id="viewEmergency" class="view-panel" style="display: none;">
+        <div style="margin-bottom: 2rem;">
+          <h2 class="section-heading">Verified Emergency Services & Ambulance Fleet</h2>
+          <p class="section-sub">National helplines, hospital emergency triage desks, and active GPS-tracked ambulance units.</p>
+        </div>
+
+        <h3 style="margin-bottom: 1rem; font-size: 1.25rem;">National Helplines & Hospital Desks</h3>
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem; margin-bottom: 2.5rem;" id="emergencyContactsGrid">
+          <!-- Rendered dynamically -->
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+          <h3 style="font-size: 1.25rem;">Live Ambulance Fleet</h3>
+          <button class="btn btn-sm btn-danger" onclick="app.openDispatchModal()">+ Request Ambulance Dispatch</button>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.5rem;" id="ambulancesGrid">
+          <!-- Rendered dynamically -->
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL: SOS EMERGENCY DISPATCH                                             -->
+  <!-- ========================================================================= -->
+  <div class="modal-overlay" id="dispatchModal">
+    <div class="modal-content">
+      <button class="modal-close-btn" onclick="app.closeModal('dispatchModal')">&times;</button>
+      <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.5rem;">
+        <span class="pulsing-dot"></span>
+        <span class="section-label" style="color: var(--red);">Priority Emergency Request</span>
+      </div>
+      <h2 style="margin-bottom: 0.5rem; font-size: 1.5rem;">Instant Ambulance Dispatch</h2>
+      <p style="font-size: 0.9rem; color: var(--text-body); margin-bottom: 1.25rem;">
+        System automatically identifies the closest available unit, calculates driving ETA, and notifies the destination hospital triage.
+      </p>
+
+      <form id="dispatchForm" onsubmit="app.submitDispatch(event)">
+        <div class="form-group">
+          <label class="form-label" for="dispPatientName">Patient Full Name *</label>
+          <input type="text" id="dispPatientName" class="form-input" placeholder="e.g. Ramesh Gupta" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="dispPhone">Contact Phone Number *</label>
+          <input type="tel" id="dispPhone" class="form-input" placeholder="+91-9811001122" required>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <div class="form-group">
+            <label class="form-label" for="dispEmergencyType">Emergency Medical Type *</label>
+            <select id="dispEmergencyType" class="form-select" required>
+              <option value="Cardiac Arrest">Cardiac Arrest / Heart Pain</option>
+              <option value="Severe Trauma">Severe Trauma / Road Accident</option>
+              <option value="Stroke / Neurological">Stroke / Neurological Crisis</option>
+              <option value="Respiratory Distress">Respiratory Distress</option>
+              <option value="Maternity Emergency">Maternity / Pregnancy</option>
+              <option value="General Emergency">General Medical Emergency</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="dispVehicleType">Ambulance Vehicle Type *</label>
+            <select id="dispVehicleType" class="form-select" required>
+              <option value="Advanced Life Support (ALS)">Advanced Life Support (ALS)</option>
+              <option value="Basic Life Support (BLS)">Basic Life Support (BLS)</option>
+              <option value="Cardiac Mobile ICU">Cardiac Mobile ICU</option>
+              <option value="Neonatal / Pediatric ICU">Neonatal / Pediatric ICU</option>
             </select>
           </div>
         </div>
 
-        <!-- Hospital Cards Container -->
-        <div class="hospitals-list" id="hospitalsList">
-          <!-- Rendered dynamically via JS -->
-        </div>
-      </section>
-
-      <!-- Right Column: Interactive Map -->
-      <section class="map-column">
-        <div class="map-wrapper">
-          <div id="hospitalMap" class="hospital-map" aria-label="Interactive Hospital Locator Map"></div>
-          <div class="map-overlay-legend">
-            <div class="legend-item"><span class="marker-dot dot-verified"></span> Verified Hospital</div>
-            <div class="legend-item"><span class="marker-dot dot-emergency"></span> 24x7 Emergency</div>
-            <div class="legend-item"><span class="marker-dot dot-user"></span> Your Location</div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <div class="form-group">
+            <label class="form-label" for="dispLatitude">Latitude Coordinate *</label>
+            <input type="number" step="any" id="dispLatitude" class="form-input" value="28.6139" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="dispLongitude">Longitude Coordinate *</label>
+            <input type="number" step="any" id="dispLongitude" class="form-input" value="77.2090" required>
           </div>
         </div>
-      </section>
+
+        <div style="display: flex; gap: 0.5rem; margin-bottom: 1.25rem;">
+          <button type="button" class="btn btn-sm btn-outline" onclick="app.fillDispatchCurrentLocation()">📍 Current Location</button>
+          <button type="button" class="btn btn-sm btn-outline" onclick="app.fillDispatchSampleLocation()">📍 New Delhi NCR Sample</button>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="dispNotes">Clinical Situation / Notes (Optional)</label>
+          <textarea id="dispNotes" class="form-textarea" rows="2" placeholder="e.g. Patient on 2nd floor, elevator available, unconscious..."></textarea>
+        </div>
+
+        <div id="dispatchErrorBox" style="display: none; background: #FEE2E2; color: #991B1B; padding: 0.75rem 1rem; border-radius: 12px; font-size: 0.85rem; margin-bottom: 1rem;"></div>
+
+        <button type="submit" id="btnSubmitDispatch" class="btn btn-danger" style="width: 100%;">
+          Dispatch Nearest Ambulance Now
+        </button>
+      </form>
+
+      <!-- Confirmation Box (Hidden initially) -->
+      <div id="dispatchSuccessCard" style="display: none; margin-top: 1.25rem; background: #ECFDF5; border: 1px solid #A7F3D0; border-radius: 16px; padding: 1.25rem;">
+        <h4 style="color: #065F46; font-size: 1.15rem; margin-bottom: 0.5rem;">Ambulance Dispatched!</h4>
+        <div id="dispatchSuccessDetails" style="font-size: 0.9rem; color: #065F46; line-height: 1.6;"></div>
+        <div style="margin-top: 1rem; display: flex; gap: 0.5rem;">
+          <button class="btn btn-sm btn-success" onclick="app.viewActiveTracking()">Track Ambulance</button>
+          <button class="btn btn-sm btn-outline" onclick="app.closeModal('dispatchModal')">Done</button>
+        </div>
+      </div>
     </div>
-  </main>
+  </div>
 
-  <!-- Modals -->
+  <!-- ========================================================================= -->
+  <!-- MODAL: TRACK AMBULANCE DISPATCH                                          -->
+  <!-- ========================================================================= -->
+  <div class="modal-overlay" id="trackModal">
+    <div class="modal-content">
+      <button class="modal-close-btn" onclick="app.closeModal('trackModal')">&times;</button>
+      <span class="section-label">Live Geospatial Tracking</span>
+      <h2 style="margin-bottom: 1rem; font-size: 1.5rem;">Track Emergency SOS Status</h2>
+      
+      <div class="form-group">
+        <label class="form-label" for="trackIdInput">Enter Tracking ID</label>
+        <div style="display: flex; gap: 0.5rem;">
+          <input type="text" id="trackIdInput" class="form-input" placeholder="e.g. SOS-20260920-8912">
+          <button class="btn btn-primary" onclick="app.lookupTracking()">Track</button>
+        </div>
+      </div>
 
-  <!-- 1. Hospital Details Modal -->
-  <div class="modal-backdrop" id="hospitalModal" style="display: none;">
-    <div class="modal-card modal-lg">
-      <div class="modal-header">
+      <div id="trackResultContainer" style="margin-top: 1.5rem;">
+        <!-- Populated dynamically -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL: AUTHENTICATION (SIGN IN / REGISTER)                                 -->
+  <!-- ========================================================================= -->
+  <div class="modal-overlay" id="authModal">
+    <div class="modal-content">
+      <button class="modal-close-btn" onclick="app.closeModal('authModal')">&times;</button>
+      <div class="tabs-nav">
+        <button id="authTabLogin" class="tab-btn active" onclick="app.setAuthTab('login')">Sign In</button>
+        <button id="authTabRegister" class="tab-btn" onclick="app.setAuthTab('register')">Register New Account</button>
+      </div>
+
+      <!-- Quick 1-Click Demo Login Banner -->
+      <div style="background: var(--tint-blue); border-radius: 12px; padding: 0.75rem 1rem; margin-bottom: 1.25rem; display: flex; justify-content: space-between; align-items: center;">
+        <span style="font-size: 0.82rem; color: var(--primary); font-weight: 600;">Evaluation Demo Admin:</span>
+        <button type="button" class="btn btn-sm btn-primary" onclick="app.quickAdminLogin()">1-Click Demo Admin Login</button>
+      </div>
+
+      <!-- Sign In Form -->
+      <form id="loginForm" onsubmit="app.submitLogin(event)">
+        <div class="form-group">
+          <label class="form-label" for="loginEmail">Email Address</label>
+          <input type="email" id="loginEmail" class="form-input" placeholder="admin@neerajpharma.com" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="loginPassword">Password</label>
+          <input type="password" id="loginPassword" class="form-input" placeholder="••••••••" required>
+        </div>
+        <div id="loginErrorBox" style="display: none; background: #FEE2E2; color: #991B1B; padding: 0.6rem 1rem; border-radius: 12px; font-size: 0.85rem; margin-bottom: 1rem;"></div>
+        <button type="submit" class="btn btn-primary" style="width: 100%;">Sign In</button>
+      </form>
+
+      <!-- Register Form -->
+      <form id="registerForm" style="display: none;" onsubmit="app.submitRegister(event)">
+        <div class="form-group">
+          <label class="form-label" for="regName">Full Name *</label>
+          <input type="text" id="regName" class="form-input" placeholder="e.g. Dr. Vikas Mehra" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="regEmail">Email Address *</label>
+          <input type="email" id="regEmail" class="form-input" placeholder="name@example.com" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="regPassword">Password * (Min 8 characters, alphanumeric)</label>
+          <input type="password" id="regPassword" class="form-input" placeholder="Password@123" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="regPhone">Phone Number (Optional)</label>
+          <input type="tel" id="regPhone" class="form-input" placeholder="+91-9811009988">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="regDepartment">Department / Role Description</label>
+          <input type="text" id="regDepartment" class="form-input" placeholder="Public User / Emergency Desk" value="Public User">
+        </div>
+        <div id="regErrorBox" style="display: none; background: #FEE2E2; color: #991B1B; padding: 0.6rem 1rem; border-radius: 12px; font-size: 0.85rem; margin-bottom: 1rem;"></div>
+        <button type="submit" class="btn btn-primary" style="width: 100%;">Create Account</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL: HOSPITAL DETAIL & AFFILIATED DOCTORS                               -->
+  <!-- ========================================================================= -->
+  <div class="modal-overlay" id="hospitalDetailModal">
+    <div class="modal-content modal-large">
+      <button class="modal-close-btn" onclick="app.closeModal('hospitalDetailModal')">&times;</button>
+      <div id="hospitalDetailContent">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL: ADMIN CONTROL CENTER                                               -->
+  <!-- ========================================================================= -->
+  <div class="modal-overlay" id="adminModal">
+    <div class="modal-content modal-large">
+      <button class="modal-close-btn" onclick="app.closeModal('adminModal')">&times;</button>
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; border-bottom: 1px solid var(--border); padding-bottom: 0.75rem;">
         <div>
-          <span class="badge badge-verified" id="modalVerifiedBadge">Verified Partner</span>
-          <h2 id="modalHospitalName">Hospital Name</h2>
-          <p class="modal-address" id="modalHospitalAddress">Hospital Address</p>
+          <span class="section-label">Administrator Panel</span>
+          <h2 style="font-size: 1.5rem;">Neeraj Pharma Healthcare Control Center</h2>
         </div>
-        <button class="modal-close" onclick="app.closeModal('hospitalModal')">&times;</button>
+        <span class="role-badge admin">Admin Authenticated</span>
       </div>
-      <div class="modal-body" id="modalHospitalBody">
-        <!-- Dynamic content: Stats, Hours, Beds, Specialties, Doctors -->
-      </div>
-      <div class="modal-footer">
-        <a id="modalCallDirect" href="#" class="btn btn-outline">Call Main Desk</a>
-        <a id="modalCallEmergency" href="#" class="btn btn-danger">🚨 Call Emergency Hotline</a>
-        <button id="modalDispatchAmbulance" class="btn btn-primary">Dispatch Ambulance Here</button>
-      </div>
-    </div>
-  </div>
 
-  <!-- 2. Emergency Dispatch Modal -->
-  <div class="modal-backdrop" id="dispatchModal" style="display: none;">
-    <div class="modal-card">
-      <div class="modal-header emergency-header">
-        <div>
-          <span class="badge badge-danger">High Priority</span>
-          <h2>Request Emergency Ambulance Dispatch</h2>
-          <p>Instant allocation to the closest active medical transit unit</p>
-        </div>
-        <button class="modal-close" onclick="app.closeModal('dispatchModal')">&times;</button>
+      <div class="tabs-nav">
+        <button id="adminTabKpi" class="tab-btn active" onclick="app.setAdminTab('kpi')">Dashboard KPIs</button>
+        <button id="adminTabQueue" class="tab-btn" onclick="app.setAdminTab('queue')">Verification Backlog</button>
+        <button id="adminTabHospitals" class="tab-btn" onclick="app.setAdminTab('hospitals')">Manage Hospitals</button>
+        <button id="adminTabFleet" class="tab-btn" onclick="app.setAdminTab('fleet')">Doctors & Fleet</button>
+        <button id="adminTabUsers" class="tab-btn" onclick="app.setAdminTab('users')">User Management</button>
+        <button id="adminTabSystem" class="tab-btn" onclick="app.setAdminTab('system')">System State</button>
       </div>
-      <div class="modal-body">
-        <form id="dispatchForm" onsubmit="app.handleDispatchSubmit(event)">
-          <div class="form-group">
-            <label for="dispPatientName">Patient Full Name *</label>
-            <input type="text" id="dispPatientName" required placeholder="e.g. Ramesh Kumar">
-          </div>
-          <div class="form-group">
-            <label for="dispContactPhone">Emergency Contact Phone *</label>
-            <input type="tel" id="dispContactPhone" required placeholder="e.g. +91 9876543210">
-          </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label for="dispEmergencyType">Emergency Condition</label>
-              <select id="dispEmergencyType">
-                <option value="Cardiac / Chest Pain">Cardiac / Severe Chest Pain</option>
-                <option value="Road Accident / Severe Trauma">Accident / Severe Trauma</option>
-                <option value="Stroke / Neurological">Stroke Symptoms / Seizure</option>
-                <option value="Respiratory Distress">Severe Breathing Trouble</option>
-                <option value="Maternal / Pediatric">Maternal Labor / Pediatric Crisis</option>
-                <option value="General Acute Medical">General Acute Emergency</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label for="dispVehicleType">Ambulance Tier</label>
-              <select id="dispVehicleType">
-                <option value="Any">Fastest Available (Any Tier)</option>
-                <option value="Advanced Life Support (ALS)">Advanced Life Support (ALS)</option>
-                <option value="Cardiac Mobile ICU">Cardiac Mobile ICU</option>
-                <option value="Basic Life Support (BLS)">Basic Life Support (BLS)</option>
-              </select>
-            </div>
-          </div>
-          <div class="form-group">
-            <label for="dispNotes">Incident Details / Landmarks</label>
-            <textarea id="dispNotes" rows="2" placeholder="Floor, landmark, specific symptoms..."></textarea>
-          </div>
-          <div class="form-info-box">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
-            <span>Pickup coordinates will automatically use your selected location (<strong id="dispCoordsLabel">28.6139, 77.2090</strong>).</span>
-          </div>
-          <button type="submit" class="btn btn-danger btn-block btn-lg" id="btnSubmitDispatch">
-            Confirm & Dispatch Nearest Ambulance
-          </button>
-        </form>
 
-        <div id="dispatchSuccessBlock" style="display: none;" class="dispatch-success">
-          <!-- Filled after dispatch -->
-        </div>
+      <div id="adminTabContent" style="min-height: 380px;">
+        <!-- Populated dynamically via app.renderAdminTab() -->
       </div>
     </div>
   </div>
 
-  <!-- 3. Auth Modal (Login / Register) -->
-  <div class="modal-backdrop" id="authModal" style="display: none;">
-    <div class="modal-card">
-      <div class="modal-header">
-        <div class="auth-tabs">
-          <button class="auth-tab-btn active" id="tabLoginBtn" onclick="app.switchAuthTab('login')">Sign In</button>
-          <button class="auth-tab-btn" id="tabRegisterBtn" onclick="app.switchAuthTab('register')">Register</button>
-        </div>
-        <button class="modal-close" onclick="app.closeModal('authModal')">&times;</button>
-      </div>
-
-      <div class="modal-body">
-        <!-- Quick Demo Credentials Fill -->
-        <div class="demo-login-bar">
-          <span>Quick Demo:</span>
-          <button type="button" class="btn btn-xs btn-outline" onclick="app.fillDemoLogin('admin')">Admin Demo</button>
-          <button type="button" class="btn btn-xs btn-outline" onclick="app.fillDemoLogin('patient')">Citizen Demo</button>
-        </div>
-
-        <!-- Login Form -->
-        <form id="loginForm" onsubmit="app.handleLoginSubmit(event)">
-          <div class="form-group">
-            <label for="loginEmail">Email Address</label>
-            <input type="email" id="loginEmail" required placeholder="admin@neerajpharma.com">
-          </div>
-          <div class="form-group">
-            <label for="loginPassword">Password</label>
-            <input type="password" id="loginPassword" required placeholder="Admin@12345">
-          </div>
-          <div id="loginError" class="alert alert-danger" style="display: none;"></div>
-          <button type="submit" class="btn btn-primary btn-block">Sign In</button>
-        </form>
-
-        <!-- Register Form -->
-        <form id="registerForm" style="display: none;" onsubmit="app.handleRegisterSubmit(event)">
-          <div class="form-group">
-            <label for="regName">Full Name *</label>
-            <input type="text" id="regName" required placeholder="John Doe">
-          </div>
-          <div class="form-group">
-            <label for="regEmail">Email Address *</label>
-            <input type="email" id="regEmail" required placeholder="john@example.com">
-          </div>
-          <div class="form-group">
-            <label for="regPhone">Phone Number</label>
-            <input type="tel" id="regPhone" placeholder="+91-9876543210">
-          </div>
-          <div class="form-group">
-            <label for="regPassword">Password (minimum 6 chars) *</label>
-            <input type="password" id="regPassword" required minlength="6" placeholder="Choose a password">
-          </div>
-          <div id="registerError" class="alert alert-danger" style="display: none;"></div>
-          <button type="submit" class="btn btn-primary btn-block">Create Account</button>
-        </form>
-      </div>
-    </div>
-  </div>
-
-  <!-- 4. Admin Management Modal -->
-  <div class="modal-backdrop" id="adminModal" style="display: none;">
-    <div class="modal-card modal-xl">
-      <div class="modal-header">
-        <div>
-          <span class="badge badge-admin">Administrator Dashboard</span>
-          <h2>Hospital Verification & Operations Control</h2>
-        </div>
-        <button class="modal-close" onclick="app.closeModal('adminModal')">&times;</button>
-      </div>
-      <div class="modal-body">
-        <!-- KPI Cards -->
-        <div class="admin-kpi-grid" id="adminKpis">
-          <div class="kpi-card">
-            <span class="kpi-num" id="kpiTotalHospitals">-</span>
-            <span class="kpi-label">Total Hospitals</span>
-          </div>
-          <div class="kpi-card highlight-success">
-            <span class="kpi-num" id="kpiVerifiedHospitals">-</span>
-            <span class="kpi-label">Verified Hospitals</span>
-          </div>
-          <div class="kpi-card highlight-warning">
-            <span class="kpi-num" id="kpiPendingHospitals">-</span>
-            <span class="kpi-label">Pending Approval</span>
-          </div>
-          <div class="kpi-card">
-            <span class="kpi-num" id="kpiTotalDoctors">-</span>
-            <span class="kpi-label">Doctors Roster</span>
-          </div>
-          <div class="kpi-card highlight-danger">
-            <span class="kpi-num" id="kpiAmbulances">-</span>
-            <span class="kpi-label">Active Ambulances</span>
-          </div>
-          <div class="kpi-card">
-            <span class="kpi-num" id="kpiUsers">-</span>
-            <span class="kpi-label">Platform Users</span>
-          </div>
-        </div>
-
-        <!-- Verification Queue Section -->
-        <div class="admin-section">
-          <h3>Pending Hospital Verification Queue</h3>
-          <p class="section-desc">Review and approve new healthcare providers before they appear in public search</p>
-          <div id="pendingHospitalsTableWrap" class="table-responsive">
-            <!-- Rendered via JS -->
-          </div>
-        </div>
-
-        <!-- Emergency Services & Ambulance Verification Queue -->
-        <div class="admin-section">
-          <h3>Pending Emergency Services & Ambulance Verifications</h3>
-          <p class="section-desc">Verify emergency helplines and ambulance transit units</p>
-          <div id="pendingEmergencyTableWrap" class="table-responsive">
-            <!-- Rendered via JS -->
-          </div>
-        </div>
-
-        <!-- User Management Section -->
-        <div class="admin-section">
-          <h3>User & Access Control Management</h3>
-          <p class="section-desc">Manage user roles (User / Admin), account status (Active / Disabled), and access</p>
-          <div id="adminUsersTableWrap" class="table-responsive">
-            <!-- Rendered via JS -->
-          </div>
-        </div>
-
-        <!-- Add Hospital Accordion Form -->
-        <div class="admin-section">
-          <div class="section-header-row">
-            <h3>Add New Verified Hospital</h3>
-            <button class="btn btn-sm btn-outline" onclick="app.toggleAddHospitalForm()">Toggle Form</button>
-          </div>
-          <form id="addHospitalForm" style="display: none;" onsubmit="app.handleAddHospitalSubmit(event)">
-            <div class="form-row">
-              <div class="form-group">
-                <label>Hospital Name *</label>
-                <input type="text" id="newHospName" required placeholder="AIIMS Emergency Annex">
-              </div>
-              <div class="form-group">
-                <label>Facility Type *</label>
-                <select id="newHospFacility">
-                  <option value="Super Speciality">Super Speciality</option>
-                  <option value="Multi-Speciality">Multi-Speciality</option>
-                  <option value="Trauma Center">Trauma Center</option>
-                  <option value="General Hospital">General Hospital</option>
-                  <option value="Urgent Care Clinic">Urgent Care Clinic</option>
-                </select>
-              </div>
-            </div>
-            <div class="form-group">
-              <label>Address *</label>
-              <input type="text" id="newHospAddress" required placeholder="Ring Road, Ansari Nagar">
-            </div>
-            <div class="form-row">
-              <div class="form-group">
-                <label>City *</label>
-                <input type="text" id="newHospCity" value="New Delhi" required>
-              </div>
-              <div class="form-group">
-                <label>Latitude *</label>
-                <input type="number" step="0.0001" id="newHospLat" required value="28.5672">
-              </div>
-              <div class="form-group">
-                <label>Longitude *</label>
-                <input type="number" step="0.0001" id="newHospLng" required value="77.2100">
-              </div>
-            </div>
-            <div class="form-row">
-              <div class="form-group">
-                <label>Phone *</label>
-                <input type="tel" id="newHospPhone" required placeholder="+91-11-26588500">
-              </div>
-              <div class="form-group">
-                <label>Emergency Hotline *</label>
-                <input type="tel" id="newHospEmergency" required placeholder="+91-11-26588700">
-              </div>
-              <div class="form-group">
-                <label>Available Beds *</label>
-                <input type="number" id="newHospBeds" value="50" required>
-              </div>
-            </div>
-            <div class="form-group">
-              <label>Specialties (comma separated)</label>
-              <input type="text" id="newHospSpecialties" value="Emergency & Trauma, Cardiology, Neurology">
-            </div>
-            <button type="submit" class="btn btn-primary">Create & Publish Hospital</button>
-          </form>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- 5. Emergency Contacts & Ambulances Directory Modal -->
-  <div class="modal-backdrop" id="emergencyDirectoryModal" style="display: none;">
-    <div class="modal-card modal-lg">
-      <div class="modal-header">
-        <div>
-          <span class="badge badge-danger">Emergency Network</span>
-          <h2>National Helplines & Regional Hospital Emergency Desks</h2>
-        </div>
-        <button class="modal-close" onclick="app.closeModal('emergencyDirectoryModal')">&times;</button>
-      </div>
-      <div class="modal-body" id="emergencyDirectoryBody">
-        <!-- Rendered via JS -->
-      </div>
-    </div>
-  </div>
+  <!-- Toast Notification Container -->
+  <div id="toastContainer" aria-live="polite"></div>
 
   <!-- Footer -->
-  <footer class="main-footer">
-    <div class="container footer-inner">
-      <div class="footer-left">
-        <strong>Neeraj Pharma Healthcare & Emergency Hospital Locator</strong>
-        <p>Technical Module Documentation & Full-Stack Platform Architecture.</p>
+  <footer style="margin-top: auto; background: #111827; color: #9CA3AF; padding: 2.5rem 0 1.5rem; border-top: 1px solid #1F2937;">
+    <div class="container" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; font-size: 0.9rem;">
+      <div>
+        <strong style="color: #F9FAFB;">Neeraj Pharma Healthcare & Emergency Hospital Locator</strong> &bull; Version 2.0.0
       </div>
-      <div class="footer-links">
-        <a href="/api/health" target="_blank">API Health</a>
-        <a href="/api" target="_blank">API Directory</a>
-        <a href="#locator">Back to Top</a>
+      <div>
+        REST API: <a href="/api" target="_blank" style="color: var(--primary);">/api</a> &bull;
+        Docs: <a href="/docs/API_DOCUMENTATION.md" target="_blank" style="color: var(--primary);">/docs</a> &bull;
+        Health Check: <a href="/api/health" target="_blank" style="color: var(--green);">/api/health</a>
       </div>
     </div>
   </footer>
 
   <!-- Leaflet JS -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-  <!-- Application Script -->
-  <script src="js/app.js"></script>
+  
+  <!-- Main Frontend Application Logic -->
+  <script src="app.js"></script>
 </body>
 </html>

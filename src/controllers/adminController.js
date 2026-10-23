@@ -292,6 +292,10 @@ function deleteUser(req, res) {
 }
 
 function reseed(req, res) {
+  if (process.env.NODE_ENV === 'production') {
+    return error(res, 'Database reseed is disabled in production', 403);
+  }
+
   const refreshedData = seedDatabase();
   return success(res, {
     hospitalsCount: refreshedData.hospitals.length,
